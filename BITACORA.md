@@ -22,3 +22,12 @@ Documentación relevada
 | Arduino ESP32 / FreeRTOS tasks| https://randomnerdtutorials.com/esp32-dual-core-arduino-ide/ |
 
 ------------------------------
+## 2026-09-06 - Iacobucci, Platz, Prieto
+Actividades realizadas
+- Búsqueda de datasheet y definición del conexionado para el ESP32, pantalla TFT, driver de motor, potenciómetro, LEDs y sensores.
+- Armado del esquemático inicial del circuito integrando todos los periféricos.
+
+Documentación relevada
+| Recurso | Link |
+|---|---|
+|Datasheet ESP32|https://www.alldatasheet.com/datasheet-pdf/pdf/1243003/ESPRESSIF/ESP32.html|
