@@ -22,7 +22,9 @@ Documentación relevada
 | Arduino ESP32 / FreeRTOS tasks| https://randomnerdtutorials.com/esp32-dual-core-arduino-ide/ |
 
 ------------------------------
+
 ## 2026-09-06 - Iacobucci, Platz, Prieto
+
 Actividades realizadas
 - Búsqueda de datasheet y definición del conexionado para el ESP32, pantalla TFT, driver de motor, potenciómetro, LEDs y sensores.
 - Armado del esquemático inicial del circuito integrando todos los periféricos.
@@ -31,3 +33,12 @@ Documentación relevada
 | Recurso | Link |
 |---|---|
 |Datasheet ESP32|https://www.alldatasheet.com/datasheet-pdf/pdf/1243003/ESPRESSIF/ESP32.html|
+
+------------------------------
+
+## 2026-09-10 - Iacobucci, Platz, Prieto
+
+Actividades realizadas
+
+- Finalización de la redacción grupal de la Propuesta de Proyecto, integrando los objetivos, cronograma, requerimientos técnicos y metodología de trabajo definidos para el desarrollo del tablero vehicular.
+- Revisión final de la propuesta y preparación del documento para su entrega.
