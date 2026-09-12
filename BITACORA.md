@@ -42,3 +42,10 @@ Actividades realizadas
 
 - Finalización de la redacción grupal de la Propuesta de Proyecto, integrando los objetivos, cronograma, requerimientos técnicos y metodología de trabajo definidos para el desarrollo del tablero vehicular.
 - Revisión final de la propuesta y preparación del documento para su entrega.
+
+------------------------------
+
+## 2026-09-11 - Iacobucci, Platz, Prieto
+Actividades realizadas
+- Corrección del Plan de Proyecto aplicando las observaciones indicadas por la docente responsable, Cabrera Merlina.
+- Armado de la presentación para exponer la propuesta.
