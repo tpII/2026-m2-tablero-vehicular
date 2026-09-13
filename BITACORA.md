@@ -52,7 +52,7 @@ Actividades realizadas
 
 ------------------------------
 
-## 2026-09-11 - Platz
+## 2026-09-13 - Platz
 Actividades realizadas
 - Realizado de video de documentación.
 - Entrega del Plan de Proyecto.
