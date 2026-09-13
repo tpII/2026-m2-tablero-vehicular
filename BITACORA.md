@@ -49,3 +49,10 @@ Actividades realizadas
 Actividades realizadas
 - Corrección del Plan de Proyecto aplicando las observaciones indicadas por la docente responsable, Cabrera Merlina.
 - Armado de la presentación para exponer la propuesta.
+
+------------------------------
+
+## 2026-09-11 - Platz
+Actividades realizadas
+- Realizado de video de documentación.
+- Entrega del Plan de Proyecto.
