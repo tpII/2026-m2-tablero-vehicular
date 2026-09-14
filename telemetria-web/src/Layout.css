@@ -1,67 +1,70 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Share+Tech+Mono&display=swap");
 
-html, body, #root {
-  margin: 0;
-  padding: 0;
-  width: 100%;
-  min-height: 100vh;
-  font-family: 'Inter', sans-serif;
-  background-color: #0b0f19; /* Fondo general muy oscuro */
-  color: #e2e8f0; /* Texto claro */
+html,
+body,
+#root {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    min-height: 100vh;
+    font-family: "Inter", sans-serif;
+    background-color: #0b0f19; /* Fondo general muy oscuro */
+    color: #e2e8f0; /* Texto claro */
 }
 
 .app-container {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
 }
 
 /* === ESTILOS DEL HEADER === */
 .header-nav {
-  background-color: #111827; /* Gris oscuro para el navbar */
-  border-bottom: 1px solid #1f2937; /* Borde sutil */
-  display: flex;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 1rem 2rem;
-  align-items: center;
+    background-color: #111827; /* Gris oscuro para el navbar */
+    border-bottom: 1px solid #1f2937; /* Borde sutil */
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 1rem 2rem;
+    align-items: center;
 }
 
 .header-nav a {
-  text-decoration: none;
-  color: #9ca3af;
-  font-weight: 500;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  transition: all 0.2s ease;
+    text-decoration: none;
+    color: #9ca3af;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
 }
 
 .header-nav a:hover {
-  color: #f3f4f6;
-  background-color: rgba(255, 255, 255, 0.05);
+    color: #f3f4f6;
+    background-color: rgba(255, 255, 255, 0.05);
 }
 
 .header-nav a.active {
-  background-color: #3730a3; /* Color índigo intenso para la pestaña activa */
-  color: white;
-  font-weight: 600;
+    background-color: #3730a3; /* Color índigo intenso para la pestaña activa */
+    color: white;
+    font-weight: 600;
 }
 
 /* === ESTILOS DE LAS TARJETAS (WIDGETS) === */
 .dashboard-card {
-  background-color: #111827; /* Fondo de la tarjeta */
-  border-radius: 10px;
-  padding: 1.5rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3); /* Sombra más dura para fondos oscuros */
-  border: 1px solid #1f2937;
+    background-color: #111827; /* Fondo de la tarjeta */
+    border-radius: 10px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3); /* Sombra más dura para fondos oscuros */
+    border: 1px solid #1f2937;
 }
 
 .card-title {
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: #9ca3af;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-top: 0;
-  margin-bottom: 1.5rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 0;
+    margin-bottom: 1.5rem;
 }
