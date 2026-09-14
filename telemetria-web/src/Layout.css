@@ -1,0 +1,29 @@
+/* Contenedor que ocupa toda la pantalla */
+.app-container {
+  min-height: 100vh;
+  width: 100%;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Tema claro */
+.tema-claro {
+  background-color: #ffffff;
+  color: #333333;
+}
+
+/* Tema oscuro */
+.tema-oscuro {
+  background-color: #1a1a1a;
+  color: #f1f1f1;
+}
+
+/* Para que los enlaces se vean bien en modo oscuro */
+.tema-oscuro a {
+  color: #61dafb;
+}
+
+/* Suavizamos la línea separadora en modo oscuro */
+.tema-oscuro hr {
+  border-color: #333333;
+  opacity: 0.5;
+}
