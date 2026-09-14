@@ -1,9 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, NavLink } from 'react-router-dom';
 import './Layout.css';
 
 export default function Layout() {
-  const [modoOscuro, setModoOscuro] = useState(false);
+  // Inicializamos el estado leyendo la memoria del navegador
+  const [modoOscuro, setModoOscuro] = useState(() => {
+    const temaGuardado = localStorage.getItem('temaOscuro');
+    return temaGuardado === 'true';
+  });
+
+  // Cada vez que cambia el modo oscuro, lo guardamos
+  useEffect(() => {
+    localStorage.setItem('temaOscuro', modoOscuro);
+  }, [modoOscuro]);
 
   const claseTema = modoOscuro ? 'tema-oscuro' : 'tema-claro';
 
@@ -25,7 +34,6 @@ export default function Layout() {
       <hr />
 
       <main style={{ padding: '1rem' }}>
-        {/* Aquí se renderizarán las vistas dependiendo de la URL */}
         <Outlet />
       </main>
     </div>
