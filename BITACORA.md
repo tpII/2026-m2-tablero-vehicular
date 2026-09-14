@@ -56,3 +56,20 @@ Actividades realizadas
 Actividades realizadas
 - Realizado de video de documentación.
 - Entrega del Plan de Proyecto.
+
+------------------------------
+
+## 2026-09-14 - Iacobucci
+
+Actividades realizadas
+- Creación del proyecto en React para la interfaz web del tablero.
+- Primeras ideas y bocetos de diseño para la GUI (qué mostrar y cómo distribuir la pantalla).
+
+Documentación relevada
+
+| Recurso | Link |
+|---|---|
+|ReCharts|https://recharts.github.io/|
+|MQTT JS|https://github.com/mqttjs/MQTT.js|
+
+
