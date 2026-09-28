@@ -88,3 +88,16 @@ Actividades realizadas
 
 - Desarrollo de las vistas "Home" (espejo de la TFT física) y "Telemetry" (análisis histórico de sensores con Recharts).
 - Implementación y validación de comunicación MQTT vía WebSockets para la recepción de la telemetría del vehículo.
+
+## 2026-09-24 - Platz
+
+Actividades realizadas
+
+- Recepción de los componentes: ESP32, fuente 5V 3A, pantalla TFT ILI9341, potenciómetro 10KΩ, sensor Hall A3144, motor DC, driver puente H LS9110 y sensor INA219.
+
+## 2026-09-25 - Platz
+
+Actividades realizadas
+
+- Ejecución de pruebas de inicialización y renderizado gráfico en la pantalla TFT ILI9341.
+- Testeo del sensor de efecto Hall A3144.
