@@ -1,0 +1,87 @@
+.tft-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: space-between;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  padding: calc(6 * var(--px)) calc(6 * var(--px));
+  background: #5a5d19;
+}
+
+.tft-panel__head {
+  background: #fff;
+  border: 1px solid #000;
+  padding: calc(3 * var(--px)) calc(4 * var(--px));
+  align-self: flex-start;
+}
+
+.tft-panel__value {
+  display: flex;
+  align-items: baseline;
+  gap: calc(4 * var(--px));
+  background: #fff;
+  border: 1px solid #000;
+  padding: calc(2 * var(--px)) calc(4 * var(--px));
+}
+
+.tft-panel__unit {
+  color: #000;
+}
+
+.tft-panel__foot {
+  background: #fff;
+  border: 1px solid #000;
+  padding: calc(3 * var(--px)) calc(4 * var(--px));
+}
+
+.tft-text {
+  color: #000;
+  font-family: "Share Tech Mono", "Lucida Console", "Courier New", monospace;
+  line-height: 1;
+  white-space: pre;
+}
+
+/* Share Tech Mono tiene un avance de 0.5em: 16px de fuente = 8px de avance */
+.tft-text--f2 {
+  font-size: calc(16 * var(--px));
+  letter-spacing: 0;
+}
+
+/* Fuente 4 de TFT_eSPI: avance de 16px sobre una celda de 26px de alto */
+.tft-text--f4 {
+  font-size: calc(26 * var(--px));
+  font-weight: 700;
+  letter-spacing: calc(3 * var(--px));
+}
+
+/* Intermedia para los paneles angostos: avance de 10px */
+.tft-text--f3 {
+  font-size: calc(20 * var(--px));
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.tft-bar {
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+  background: #fff;
+  border: 1px solid #000;
+}
+
+.tft-bar__zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+
+.tft-bar__marker {
+  position: absolute;
+  top: calc(-2 * var(--px));
+  bottom: calc(-2 * var(--px));
+  width: calc(3 * var(--px));
+  margin-left: calc(-1.5 * var(--px));
+  background: #000;
+}

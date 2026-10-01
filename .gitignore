@@ -1,1 +1,6 @@
+# Librerias de terceros copiadas dentro del repo (TFT_eSPI se instala en
+# Documents\Arduino\libraries, no se versiona aqui)
+TFT_eSPI-2.5.43/
 
+# Credenciales WiFi/MQTT locales
+firmware/*/config.h

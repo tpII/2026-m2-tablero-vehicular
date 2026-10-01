@@ -1,0 +1,30 @@
+.tft-gauge {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Los bordes rectos se mantienen nitidos al escalar el SVG */
+.tft-gauge__frame {
+  shape-rendering: crispEdges;
+}
+
+.tft-gauge__text {
+  fill: #000;
+  font-family: "Share Tech Mono", "Lucida Console", "Courier New", monospace;
+  font-weight: 400;
+  white-space: pre;
+}
+
+.tft-gauge__text--f2 {
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.tft-gauge__text--f4 {
+  font-weight: 700;
+}
+
+.tft-gauge__title {
+  font-weight: 700;
+}
