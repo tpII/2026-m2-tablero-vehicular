@@ -102,6 +102,14 @@ Actividades realizadas
 - Ejecución de pruebas de inicialización y renderizado gráfico en la pantalla TFT ILI9341.
 - Testeo del sensor de efecto Hall A3144.
 
+## 2026-10-01 - Prieto
+
+Actividades realizadas
+
+- Incorporación de la publicación de datos de telemetría mediante MQTT y la simulación de sensores.
+- Implementación de la arquitectura MQTT en la interfaz web.
+- Desarrollo de componentes visuales avanzados en el dashboard web.
+
 ## 2026-10-01 - Iacobucci
 
 Actividades realizadas
