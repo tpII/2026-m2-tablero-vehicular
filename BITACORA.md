@@ -109,3 +109,17 @@ Actividades realizadas
 - Incorporación de la publicación de datos de telemetría mediante MQTT y la simulación de sensores.
 - Implementación de la arquitectura MQTT en la interfaz web.
 - Desarrollo de componentes visuales avanzados en el dashboard web.
+
+## 2026-10-01 - Iacobucci
+
+Actividades realizadas
+
+- Integración de las librerías TFT_eSPI (v2.5.43) y TFT_eWidget dentro del sketch, en `firmware/TableroVehicular/src/TFT_eSPI`, para que el Arduino IDE las compile automáticamente sin necesidad de instalarlas en cada equipo.
+- Reemplazo del sketch inicial por el ejemplo de medidores analógicos (MeterWidget) como primera prueba de widgets gráficos.
+- Prueba en hardware: el sketch fue cargado en el ESP32 y los medidores analógicos se visualizaron y animaron correctamente en la pantalla TFT.
+
+Documentación relevada
+
+| Recurso     | Link                                  |
+| ----------- | ------------------------------------- |
+| TFT_eWidget | https://github.com/Bodmer/TFT_eWidget |
