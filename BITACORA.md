@@ -101,3 +101,17 @@ Actividades realizadas
 
 - Ejecución de pruebas de inicialización y renderizado gráfico en la pantalla TFT ILI9341.
 - Testeo del sensor de efecto Hall A3144.
+
+## 2026-10-01 - Iacobucci
+
+Actividades realizadas
+
+- Integración de las librerías TFT_eSPI (v2.5.43) y TFT_eWidget dentro del sketch, en `firmware/TableroVehicular/src/TFT_eSPI`, para que el Arduino IDE las compile automáticamente sin necesidad de instalarlas en cada equipo.
+- Reemplazo del sketch inicial por el ejemplo de medidores analógicos (MeterWidget) como primera prueba de widgets gráficos.
+- Prueba en hardware: el sketch fue cargado en el ESP32 y los medidores analógicos se visualizaron y animaron correctamente en la pantalla TFT.
+
+Documentación relevada
+
+| Recurso     | Link                                  |
+| ----------- | ------------------------------------- |
+| TFT_eWidget | https://github.com/Bodmer/TFT_eWidget |
