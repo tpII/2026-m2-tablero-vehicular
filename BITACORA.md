@@ -123,3 +123,15 @@ Documentación relevada
 | Recurso     | Link                                  |
 | ----------- | ------------------------------------- |
 | TFT_eWidget | https://github.com/Bodmer/TFT_eWidget |
+
+## 2026-10-01 - Platz
+
+Actividades realizadas
+
+- Soldadura de los pines del sensor de corriente INA219.
+- Soldadura de los cables de alimentación al motor DC.
+- Soldadura de los cables de salida de la fuente de alimentación de 5V.
+
+Inconvenientes
+
+- Al probar el driver de motor L9110S, el motor no respondió. Probamos el motor por separado, alimentándolo directamente, y funcionó correctamente. Por ahora no sabemos si la falla está en el driver o en el conexionado o la señal de control. Queda pendiente aislar el driver y probarlo por separado.
