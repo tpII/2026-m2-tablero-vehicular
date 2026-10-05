@@ -1,30 +1,101 @@
+/* Paleta compartida con TftPanel y Home. Cambiando estas variables se
+   re-colorea todo el tablero. El amarillo es dorado, no el #ffff00 de la TFT. */
+:root {
+    --z-green: #22c55e;
+    --z-yellow: #eab308;
+    --z-orange: #f97316;
+    --z-red: #ef4444;
+
+    --tft-bg: #0b1220;
+    --tft-face: #0f172a;
+    --tft-line: #1e293b;
+    --tft-text: #e2e8f0;
+    --tft-dim: #94a3b8;
+    --tft-faint: #475569;
+}
+
 .tft-gauge {
-  display: block;
-  width: 100%;
-  height: 100%;
+    display: block;
+    width: 100%;
+    height: 100%;
+    font-family:
+        "Share Tech Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
 }
 
-/* Los bordes rectos se mantienen nitidos al escalar el SVG */
-.tft-gauge__frame {
-  shape-rendering: crispEdges;
+.tft-gauge__face {
+    fill: var(--tft-face);
+    stroke: var(--tft-line);
+    stroke-width: 1;
 }
 
-.tft-gauge__text {
-  fill: #000;
-  font-family: "Share Tech Mono", "Lucida Console", "Courier New", monospace;
-  font-weight: 400;
-  white-space: pre;
+/* Franja de color sobre el arco */
+.tft-gauge__track,
+.tft-gauge__zone {
+    fill: none;
+    stroke-width: 6;
+    stroke-linecap: butt;
 }
 
-.tft-gauge__text--f2 {
-  font-weight: 600;
-  letter-spacing: 0;
+.tft-gauge__track {
+    stroke: var(--tft-line);
 }
 
-.tft-gauge__text--f4 {
-  font-weight: 700;
+.tft-gauge__zone--green {
+    stroke: var(--z-green);
+}
+.tft-gauge__zone--yellow {
+    stroke: var(--z-yellow);
+}
+.tft-gauge__zone--orange {
+    stroke: var(--z-orange);
+}
+.tft-gauge__zone--red {
+    stroke: var(--z-red);
+}
+
+.tft-gauge__tick {
+    stroke: var(--tft-faint);
+    stroke-width: 1;
+    stroke-linecap: round;
+}
+
+.tft-gauge__tick--major {
+    stroke: var(--tft-dim);
+    stroke-width: 1.5;
+}
+
+.tft-gauge__scale {
+    fill: var(--tft-dim);
+    font-size: 14px;
 }
 
 .tft-gauge__title {
-  font-weight: 700;
+    fill: var(--tft-faint);
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    opacity: 0.55;
+}
+
+.tft-gauge__value {
+    fill: var(--tft-text);
+    font-size: 20px;
+}
+
+.tft-gauge__unit {
+    fill: var(--tft-dim);
+    font-size: 13px;
+}
+
+.tft-gauge__needle {
+    stroke: #f8fafc;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.6));
+}
+
+.tft-gauge__hub {
+    fill: var(--z-red);
+    stroke: #f8fafc;
+    stroke-width: 1.5;
 }

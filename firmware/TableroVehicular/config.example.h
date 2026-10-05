@@ -19,6 +19,37 @@
 #define PUBLISH_INTERVAL_MS 1000
 #define MAX_RPM             8000
 
+// ---------------------------------------------------------------- Nucleos
+// El stack de WiFi/TLS vive en el core de Arduino (0). MQTT DEBE ir ahi
+// porque comparte el socket de red con el, y los sensores en el core 1 para
+// que ninguna tarea se bloquee a la otra.
+#define NUCLEO_MQTT     0
+#define NUCLEO_SENSORES 1
+
+// MQTT por encima de sensores: publicar no espera a nadie, muestrear si.
+#define PRIORIDAD_MQTT     2
+#define PRIORIDAD_SENSORES 1
+
+// La pantalla dibuja por debajo de los sensores a proposito: una pasada de
+// SPI bloquea decenas de ms y no debe hacer perder una muestra.
+#define PRIORIDAD_PANTALLA 0
+
+// Frecuencia de muestreo. El nucleo de MQTT publica cada
+// PUBLISH_INTERVAL_MS usando la ultima lectura disponible.
+#define SENSOR_PERIOD_MS 50
+
+// Refresco de las agujas. 60ms da ~16 fps, suficiente para un medidor y deja
+// margen entre pasadas para el resto del trabajo del core.
+#define PANTALLA_PERIOD_MS 60
+
+// ---------------------------------------------------------------- Entradas
+// El potenciometro debe caer en ADC1 (GPIO 32-39): con WiFi encendido los
+// pines ADC2 estan ocupados y analogRead devuelve basura.
+#define PIN_POTENCIOMETRO 34
+
+// 0 = el acelerador sale de la simulacion, 1 = se lee el ADC real.
+#define USAR_POTENCIOMETRO_REAL 0
+
 // ---------------------------------------------------------------- Pantalla
 // Pines del ST7789. Se=configuran en el bloque 3, junto con User_Setup.h
 // de TFT_eSPI. Ajusta CS si tuDisplay lo tiene conectado.

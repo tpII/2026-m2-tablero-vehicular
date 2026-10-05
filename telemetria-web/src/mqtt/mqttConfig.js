@@ -2,14 +2,18 @@
 // VITE_MQTT_TOPIC, o desde la consola MQTT con localStorage ("mqtt.url").
 // La IP es la del PC que corre Mosquitto; sirve tanto desde el navegador de
 // esa misma maquina como desde un movil en la misma red.
-const DEFAULT_URL = "ws://10.0.22.205:9001";
+const DEFAULT_URL = "ws://10.51.117.217:9001";
 const DEFAULT_TOPIC = "vehiculo/m2/telemetria";
 
 export const MQTT_URL =
-  import.meta.env.VITE_MQTT_URL || localStorage.getItem("mqtt.url") || DEFAULT_URL;
+  import.meta.env.VITE_MQTT_URL ||
+  localStorage.getItem("mqtt.url") ||
+  DEFAULT_URL;
 
 export const MQTT_TOPIC =
-  import.meta.env.VITE_MQTT_TOPIC || localStorage.getItem("mqtt.topic") || DEFAULT_TOPIC;
+  import.meta.env.VITE_MQTT_TOPIC ||
+  localStorage.getItem("mqtt.topic") ||
+  DEFAULT_TOPIC;
 
 // Campos numericos que aceptamos del ESP32
 const FIELDS = ["velocidad", "rpm", "maxRpm", "potenciometro", "bateria"];
@@ -33,7 +37,8 @@ export function parseTelemetry(payload) {
     return null;
   }
 
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
+    return null;
 
   const data = {};
   for (const field of FIELDS) {

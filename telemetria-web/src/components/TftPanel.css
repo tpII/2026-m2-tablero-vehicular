@@ -1,87 +1,118 @@
 .tft-panel {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  justify-content: space-between;
-  box-sizing: border-box;
-  width: 100%;
-  height: 100%;
-  padding: calc(6 * var(--px)) calc(6 * var(--px));
-  background: #5a5d19;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: space-between;
+    box-sizing: border-box;
+    width: 100%;
+    height: 100%;
+    padding: calc(8 * var(--px));
+    background: var(--tft-face);
+    border: 1px solid var(--tft-line);
+    border-radius: calc(10 * var(--px));
 }
 
 .tft-panel__head {
-  background: #fff;
-  border: 1px solid #000;
-  padding: calc(3 * var(--px)) calc(4 * var(--px));
-  align-self: flex-start;
+    color: var(--tft-dim);
+    text-transform: uppercase;
+    letter-spacing: calc(1.5 * var(--px));
 }
 
 .tft-panel__value {
-  display: flex;
-  align-items: baseline;
-  gap: calc(4 * var(--px));
-  background: #fff;
-  border: 1px solid #000;
-  padding: calc(2 * var(--px)) calc(4 * var(--px));
+    display: flex;
+    align-items: baseline;
+    gap: calc(4 * var(--px));
 }
 
 .tft-panel__unit {
-  color: #000;
-}
-
-.tft-panel__foot {
-  background: #fff;
-  border: 1px solid #000;
-  padding: calc(3 * var(--px)) calc(4 * var(--px));
+    color: var(--tft-dim);
 }
 
 .tft-text {
-  color: #000;
-  font-family: "Share Tech Mono", "Lucida Console", "Courier New", monospace;
-  line-height: 1;
-  white-space: pre;
+    color: var(--tft-text);
+    font-family:
+        "Share Tech Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+    line-height: 1;
+    white-space: pre;
 }
 
-/* Share Tech Mono tiene un avance de 0.5em: 16px de fuente = 8px de avance */
+.tft-panel__head .tft-text {
+    color: inherit;
+}
+
+.tft-panel__unit.tft-text {
+    color: var(--tft-dim);
+}
+
 .tft-text--f2 {
-  font-size: calc(16 * var(--px));
-  letter-spacing: 0;
+    font-size: calc(15 * var(--px));
 }
 
-/* Fuente 4 de TFT_eSPI: avance de 16px sobre una celda de 26px de alto */
-.tft-text--f4 {
-  font-size: calc(26 * var(--px));
-  font-weight: 700;
-  letter-spacing: calc(3 * var(--px));
-}
-
-/* Intermedia para los paneles angostos: avance de 10px */
 .tft-text--f3 {
-  font-size: calc(20 * var(--px));
-  font-weight: 700;
-  letter-spacing: 0;
+    font-size: calc(28 * var(--px));
+    font-weight: 700;
 }
 
+.tft-text--f4 {
+    font-size: calc(26 * var(--px));
+    font-weight: 700;
+}
+
+/* Barra con zonas de color y marcador */
 .tft-bar {
-  position: relative;
-  width: 100%;
-  box-sizing: border-box;
-  background: #fff;
-  border: 1px solid #000;
+    position: relative;
+    width: 100%;
+    box-sizing: border-box;
+    background: var(--tft-line);
+    border-radius: calc(5 * var(--px));
+}
+
+.tft-bar__zones {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    border-radius: inherit;
 }
 
 .tft-bar__zone {
-  position: absolute;
-  top: 0;
-  bottom: 0;
+    position: absolute;
+    top: 0;
+    bottom: 0;
 }
 
 .tft-bar__marker {
-  position: absolute;
-  top: calc(-2 * var(--px));
-  bottom: calc(-2 * var(--px));
-  width: calc(3 * var(--px));
-  margin-left: calc(-1.5 * var(--px));
-  background: #000;
+    position: absolute;
+    top: calc(-3 * var(--px));
+    bottom: calc(-3 * var(--px));
+    width: calc(4 * var(--px));
+    margin-left: calc(-2 * var(--px));
+    border-radius: calc(2 * var(--px));
+    background: #f8fafc;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6);
+}
+
+/* Estado en forma de pastilla */
+.tft-panel__foot {
+    align-self: flex-start;
+    padding: calc(3 * var(--px)) calc(8 * var(--px));
+    border-radius: 999px;
+    background: rgba(148, 163, 184, 0.12);
+}
+
+.tft-panel__foot .tft-text {
+    color: var(--tft-dim);
+}
+
+.tft-panel__foot--ok {
+    background: rgba(34, 197, 94, 0.14);
+}
+.tft-panel__foot--ok .tft-text {
+    color: var(--z-green);
+}
+
+.tft-panel__foot--warn {
+    background: rgba(239, 68, 68, 0.16);
+}
+.tft-panel__foot--warn .tft-text {
+    color: var(--z-red);
 }

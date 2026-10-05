@@ -1,304 +1,279 @@
-import { useState, useEffect } from "react";
-import mqtt from "mqtt";
+import { useState, useEffect, useRef } from "react";
+import useTelemetry from "../mqtt/useTelemetry";
+
+// El provider solo emite estados en espanol y useTelemetry agrega "sin-datos"
+// cuando hay conexion pero la telemetria llego vieja. Antes se comparaba
+// contra "Connected", que nunca se emitia, y una conexion sana quedaba ambar.
+const COLOR_POR_ESTADO = {
+  conectado: "#10b981",
+  "sin-datos": "#f59e0b",
+  reconectando: "#f59e0b",
+  conectando: "#9ca3af",
+  error: "#ef4444",
+};
 
 export default function MQTTTest() {
-  const [client, setClient] = useState(null);
-  const [connectStatus, setConnectStatus] = useState("Desconectado");
-  const [brokerUrl, setBrokerUrl] = useState("ws://localhost:9001");
-  const [topic, setTopic] = useState("vehiculo/m2/telemetria");
-  const [messages, setMessages] = useState([]);
+  const { source, status, lastMessage } = useTelemetry();
+  const live = source === "esp32";
 
-  const handleConnect = () => {
-    setConnectStatus("Conectando...");
-    const mqttClient = mqtt.connect(brokerUrl);
+  // Estado para almacenar el historial de mensajes
+  const [logs, setLogs] = useState([]);
 
-    mqttClient.on("connect", () => {
-      setConnectStatus("Conectado");
-      mqttClient.subscribe(topic);
-    });
+  // Referencia para hacer auto-scroll automático hacia abajo
+  const logContainerRef = useRef(null);
 
-    mqttClient.on("error", (err) => {
-      console.error("Error:", err);
-      setConnectStatus("Error de Conexión");
-      mqttClient.end();
-    });
+  // Clave estable por fila. Con lastSeen + Math.random() todas las claves
+  // cambiaban en cada agregado, y React recreaba las 50 filas enteras.
+  const nextLogId = useRef(0);
 
-    mqttClient.on("message", (receivedTopic, message) => {
-      const newMessage = {
-        topic: receivedTopic,
-        payload: message.toString(),
-        time: new Date().toLocaleTimeString(),
-      };
-      setMessages((prev) => [newMessage, ...prev]);
-    });
-
-    setClient(mqttClient);
-  };
-
-  const handleDisconnect = () => {
-    if (client) {
-      client.end();
-      setClient(null);
-      setConnectStatus("Desconectado");
-    }
-  };
-
-  const handlePublishTest = () => {
-    if (client && connectStatus === "Conectado") {
-      const testData = {
-        velocidad: Math.floor(Math.random() * 120),
-        rpm: Math.floor(Math.random() * 6000),
-        bateria: (11 + Math.random() * 2).toFixed(1), // Batería entre 11.0 y 13.0
-      };
-      client.publish(topic, JSON.stringify(testData));
-    }
-  };
-
+  // lastMessage solo cambia cuando entra un mensaje por el broker, asi que es
+  // el unico disparador correcto para agregar una linea. Logueamos el payload
+  // crudo, no el objeto fusionado con el simulador: asi se ve lo que vino por
+  // el cable, y los mensajes que el parser rechazo (LWT "online"/"offline",
+  // JSON roto) tambien quedan a la vista en vez de desaparecer.
   useEffect(() => {
-    return () => {
-      if (client) client.end();
-    };
-  }, [client]);
+    if (!lastMessage.seq) return;
 
-  // Estilos reutilizables para los inputs
-  const inputStyle = {
-    backgroundColor: "#1f2937", // Gris oscuro a tono con las tarjetas
-    color: "#f3f4f6",
-    border: "1px solid #374151",
-    borderRadius: "6px",
-    padding: "0.75rem 1rem",
-    fontSize: "0.95rem",
-    outline: "none",
-    width: "100%",
-    boxSizing: "border-box",
-    fontFamily: "monospace",
+    const newLog = {
+      id: nextLogId.current++,
+      time: new Date(lastMessage.at).toLocaleTimeString(),
+      ok: lastMessage.ok,
+      payload: lastMessage.payload,
+    };
+
+    // Guardamos los últimos 50 mensajes para no saturar la memoria
+    setLogs((prevLogs) => [...prevLogs, newLog].slice(-50));
+  }, [lastMessage]);
+
+  // Si el usuario esta pegado al final, cada mensaje nuevo lo sigue. Si subio a
+  // leer algo, no lo movemos. Va en una ref y no en estado porque solo lo
+  // consultamos desde el efecto: asi no dispara renders.
+  const pegadoAlFinal = useRef(true);
+  const handleScroll = () => {
+    const el = logContainerRef.current;
+    if (!el) return;
+    pegadoAlFinal.current =
+      el.scrollHeight - el.scrollTop - el.clientHeight <= 4;
   };
 
-  // Estilos reutilizables para los botones
-  const btnStyle = {
-    padding: "0.75rem 1.5rem",
-    borderRadius: "6px",
-    border: "none",
-    fontWeight: "600",
-    cursor: "pointer",
-    transition: "opacity 0.2s ease",
-    display: "flex",
-    alignItems: "center",
-    gap: "0.5rem",
+  // Auto-scroll: sigue la cola solo si ya estabamos al final. El rAF agrupa la
+  // escritura en un frame para no competir con el render por el hilo.
+  useEffect(() => {
+    const el = logContainerRef.current;
+    if (!el || !pegadoAlFinal.current) return undefined;
+
+    const frame = requestAnimationFrame(() => {
+      el.scrollTop = el.scrollHeight;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [logs]);
+
+  // Función para limpiar la consola
+  const clearLogs = () => {
+    // Al vaciarla no queda nada que scrollear, asi que el navegador no dispara
+    // ningun evento de scroll: si el flag quedara en false (porque estabamos
+    // leyendo mas arriba), los mensajes siguientes nunca mas seguirian la cola.
+    pegadoAlFinal.current = true;
+    setLogs([]);
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
-      <h2 style={{ margin: 0, color: "#f3f4f6" }}>
-        Consola de Pruebas MQTT (Local)
-      </h2>
-
-      {/* CONTROLES DE CONEXIÓN EN UNA TARJETA */}
-      <div className="dashboard-card">
-        <h4 className="card-title">Configuración del Broker</h4>
-
-        <div
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "2rem",
+        // Sin height: el <main> de Layout no tiene altura definida, asi que un
+        // 100% aqui se resuelve como auto y no acota nada. El alto de la
+        // consola lo define su propia caja mas abajo.
+      }}
+    >
+      {/* CABECERA */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
+        <h2 style={{ margin: 0, color: "#f3f4f6" }}>MQTT & Connection Test</h2>
+        <button
+          onClick={clearLogs}
           style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-            gap: "1.5rem",
-            marginBottom: "1.5rem",
+            backgroundColor: "#374151",
+            color: "#f3f4f6",
+            border: "none",
+            padding: "8px 16px",
+            borderRadius: "6px",
+            cursor: "pointer",
+            fontWeight: "bold",
           }}
         >
-          <div
-            style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}
-          >
-            <label
-              style={{
-                color: "#9ca3af",
-                fontSize: "0.85rem",
-                fontWeight: "600",
-              }}
-            >
-              WebSocket URL
-            </label>
-            <input
-              type="text"
-              value={brokerUrl}
-              onChange={(e) => setBrokerUrl(e.target.value)}
-              disabled={connectStatus === "Conectado"}
-              style={{
-                ...inputStyle,
-                opacity: connectStatus === "Conectado" ? 0.6 : 1,
-              }}
-            />
-          </div>
+          Limpiar Consola
+        </button>
+      </div>
 
+      {/* PANEL DE ESTADO */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr 1fr",
+          gap: "1.5rem",
+        }}
+      >
+        <div
+          className="dashboard-card"
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "1.5rem",
+          }}
+        >
+          <h4 className="card-title" style={{ margin: "0 0 10px 0" }}>
+            Estado del Broker
+          </h4>
           <div
-            style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}
+            style={{
+              fontSize: "1.2rem",
+              fontWeight: "bold",
+              color: COLOR_POR_ESTADO[status] ?? "#9ca3af",
+            }}
           >
-            <label
-              style={{
-                color: "#9ca3af",
-                fontSize: "0.85rem",
-                fontWeight: "600",
-              }}
-            >
-              Tópico a suscribir/publicar
-            </label>
-            <input
-              type="text"
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              disabled={connectStatus === "Conectado"}
-              style={{
-                ...inputStyle,
-                opacity: connectStatus === "Conectado" ? 0.6 : 1,
-              }}
-            />
+            {status || "Desconectado"}
           </div>
         </div>
 
         <div
+          className="dashboard-card"
           style={{
             display: "flex",
-            gap: "1rem",
+            flexDirection: "column",
             alignItems: "center",
-            flexWrap: "wrap",
+            justifyContent: "center",
+            padding: "1.5rem",
           }}
         >
-          <button
-            onClick={handleConnect}
-            disabled={
-              connectStatus === "Conectado" || connectStatus === "Conectando..."
-            }
+          <h4 className="card-title" style={{ margin: "0 0 10px 0" }}>
+            Fuente de Datos
+          </h4>
+          <div
             style={{
-              ...btnStyle,
-              backgroundColor: "#10b981",
-              color: "#ffffff",
-              opacity: connectStatus === "Conectado" ? 0.5 : 1,
+              fontSize: "1.2rem",
+              fontWeight: "bold",
+              color: live ? "#3b82f6" : "#6b7280",
             }}
           >
-            Conectar
-          </button>
+            {source ? source.toUpperCase() : "NINGUNA"}
+          </div>
+        </div>
 
-          <button
-            onClick={handleDisconnect}
-            disabled={connectStatus === "Desconectado"}
+        <div
+          className="dashboard-card"
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "1.5rem",
+          }}
+        >
+          <h4 className="card-title" style={{ margin: "0 0 10px 0" }}>
+            Último Mensaje
+          </h4>
+          <div
             style={{
-              ...btnStyle,
-              backgroundColor: "#ef4444",
-              color: "#ffffff",
-              opacity: connectStatus === "Desconectado" ? 0.5 : 1,
+              fontSize: "1.2rem",
+              fontWeight: "bold",
+              color: "#f3f4f6",
+              fontFamily: "monospace",
             }}
           >
-            Desconectar
-          </button>
-
-          <span
-            style={{
-              fontWeight: "600",
-              padding: "0.5rem 1rem",
-              borderRadius: "6px",
-              backgroundColor:
-                connectStatus === "Conectado"
-                  ? "rgba(16, 185, 129, 0.1)"
-                  : connectStatus === "Error de Conexión"
-                    ? "rgba(239, 68, 68, 0.1)"
-                    : "rgba(156, 163, 175, 0.1)",
-              color:
-                connectStatus === "Conectado"
-                  ? "#10b981"
-                  : connectStatus === "Error de Conexión"
-                    ? "#ef4444"
-                    : "#9ca3af",
-            }}
-          >
-            Estado: {connectStatus}
-          </span>
-
-          <button
-            onClick={handlePublishTest}
-            disabled={connectStatus !== "Conectado"}
-            style={{
-              ...btnStyle,
-              backgroundColor: "#3b82f6",
-              color: "#ffffff",
-              marginLeft: "auto",
-              opacity: connectStatus !== "Conectado" ? 0.5 : 1,
-            }}
-          >
-            🚀 Enviar Dato de Prueba
-          </button>
+            {lastMessage.seq
+              ? new Date(lastMessage.at).toLocaleTimeString()
+              : "--:--:--"}
+          </div>
         </div>
       </div>
 
-      {/* HISTORIAL DE MENSAJES EN OTRA TARJETA */}
-      <div className="dashboard-card">
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "1.5rem",
-          }}
-        >
-          <h4 className="card-title" style={{ margin: 0 }}>
-            Mensajes Recibidos ({messages.length})
-          </h4>
+      {/* CONSOLA DE MENSAJES (TERMINAL) */}
+      <div
+        className="dashboard-card"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          // Alto definido y acotado al viewport. Sin esto la tarjeta crece con
+          // cada mensaje y termina scrolleando la pagina entera; con min() se
+          // adapta a pantallas grandes y chicas sin pasar del alto disponible.
+          // No lleva flexGrow porque su altura ya no depende del espacio libre
+          // del padre. Tampoco box-sizing global en el proyecto, asi que sin
+          // esto el height mide solo el contenido y el padding de
+          // .dashboard-card se sumaria por fuera.
+          boxSizing: "border-box",
+          height: "min(60vh, 640px)",
+          minHeight: "240px",
+        }}
+      >
+        <h4 className="card-title">Log de Mensajes MQTT</h4>
 
-          {messages.length > 0 && (
-            <button
-              onClick={() => setMessages([])}
-              style={{
-                ...btnStyle,
-                padding: "0.4rem 1rem",
-                fontSize: "0.85rem",
-                backgroundColor: "#374151",
-                color: "#f3f4f6",
-              }}
-            >
-              Limpiar Historial
-            </button>
-          )}
-        </div>
-
-        {/* Terminal Box */}
         <div
+          ref={logContainerRef}
+          onScroll={handleScroll}
           style={{
-            backgroundColor: "#0b0f19", // Fondo de terminal real
-            color: "#a9b7c6",
-            padding: "1.5rem",
-            borderRadius: "8px",
-            border: "1px solid #1f2937",
-            height: "400px",
+            backgroundColor: "#111827", // Fondo negro/oscuro tipo terminal
+            borderRadius: "6px",
+            padding: "1rem",
+            flexGrow: 1,
+            // Un flex item no baja de su altura intrinsea mientras tenga
+            // min-height:auto, y entonces el overflow nunca se activa: la lista
+            // seguia estirando la tarjeta en vez de scrollear adentro.
+            minHeight: 0,
             overflowY: "auto",
             fontFamily: "monospace",
             fontSize: "0.9rem",
-            lineHeight: "1.5",
+            color: "#a7f3d0", // Verde terminal
+            display: "flex",
+            flexDirection: "column",
+            gap: "8px",
           }}
         >
-          {messages.length === 0 ? (
+          {logs.length === 0 ? (
             <div
               style={{
-                color: "#4b5563",
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                height: "100%",
+                color: "#6b7280",
+                fontStyle: "italic",
+                textAlign: "center",
+                marginTop: "2rem",
               }}
             >
-              Esperando mensajes...
+              Esperando recibir datos...
             </div>
           ) : (
-            messages.map((msg, index) => (
-              <div key={index} style={{ marginBottom: "1rem" }}>
-                <span style={{ color: "#6366f1" }}>[{msg.time}] </span>
-                <span style={{ color: "#9ca3af" }}>{msg.topic}</span>
-                <div
+            logs.map((log) => (
+              <div
+                key={log.id}
+                style={{
+                  display: "flex",
+                  gap: "10px",
+                  borderBottom: "1px solid #1f2937",
+                  paddingBottom: "4px",
+                }}
+              >
+                <span style={{ color: "#6b7280", minWidth: "80px" }}>
+                  [{log.time}]
+                </span>
+                <span
                   style={{
-                    color: "#10b981",
-                    paddingLeft: "1rem",
-                    marginTop: "0.2rem",
+                    color: log.ok ? "#3b82f6" : "#ef4444",
+                    minWidth: "60px",
                   }}
                 >
-                  {msg.payload}
-                </div>
+                  [{log.ok ? "json" : "raw"}]
+                </span>
+                <span style={{ color: "#e5e7eb", wordBreak: "break-all" }}>
+                  {log.payload}
+                </span>
               </div>
             ))
           )}

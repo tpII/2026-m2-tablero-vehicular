@@ -1,134 +1,97 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import "./MeterGauge.css";
 
-// Réplica en SVG del widget MeterWidget de TFT_eSPI (Meter.cpp / Meter.h).
-// Todas las coordenadas están expresadas en píxeles lógicos del display TFT.
+// Medidor analogico en SVG. Conserva la geometria de MeterWidget (TFT_eSPI):
+// mismo centro, mismo barrido de escala (-50..+50), mismos topes de aguja y
+// mismas zonas en % de fondo de escala. Lo visual (colores, franja, tipografia)
+// es propio de la web y vive en MeterGauge.css.
+// Coordenadas en pixeles logicos del medidor nativo: 240 x 128.
 
 const DEG = Math.PI / 180;
 
-// Centro de la aguja y radios (Meter.cpp)
 const CX = 120;
 const CY = 140;
-const R_SCALE = 100; // radio del arco de escala
-const R_TICK_LONG = 15; // longitud del tick largo (100 + 15 = 115)
-const R_TICK_SHORT = 8;
-const R_LABEL = R_SCALE + R_TICK_LONG + 10; // 125
-const R_NEEDLE = 98;
+const R_BAND = 108; // radio de la franja de color
+const R_TICK = 98; // los ticks salen de aca hacia adentro
+const TICK_SHORT = 5;
+const TICK_LONG = 11;
+const R_LABEL = 126;
+const R_NEEDLE = 100;
 
-// Barrido de la escala: -50..+50 grados => -140..-40 grados absolutos
+// Barrido de la escala: -50..+50 grados respecto de la vertical
 const SCALE_DEG_FROM = -50;
 const SCALE_DEG_TO = 50;
 
-// Limites de la aguja: la escala es -50..+50 pero la aguja tiene tope en -150..-30
+// La aguja tiene tope en -150..-30 (valores -10%..110%), igual que el firmware
 const NEEDLE_DEG_FROM = -150;
 const NEEDLE_DEG_TO = -30;
 const NEEDLE_VAL_FROM = -10;
 const NEEDLE_VAL_TO = 110;
 
-// Colores TFT (RGB565 expandidos a RGB de 8 bits)
-const TFT_GREY = "#5a5d19"; // 0x5AEB
-const TFT_BLACK = "#000000";
-const TFT_WHITE = "#ffffff";
-const TFT_RED = "#ff0000";
-const TFT_ORANGE = "#ffa500";
-const TFT_YELLOW = "#ffff00";
-const TFT_GREEN = "#00ff00";
-const TFT_MAGENTA = "#ff00ff";
-
-// Orden de pintado de las zonas: rojo, naranja, amarillo, verde (Meter.cpp)
-const ZONE_ORDER = [
-  ["red", TFT_RED],
-  ["orange", TFT_ORANGE],
-  ["yellow", TFT_YELLOW],
-  ["green", TFT_GREEN],
-];
-
-const LABEL_Y_TWEAK = { "-50": -12, "-25": -9, 0: -6, 25: -9, 50: -12 };
+// Orden de pintado: rojo, naranja, amarillo y verde encima (como setZones)
+const ZONE_ORDER = ["red", "orange", "yellow", "green"];
 
 const polar = (radius, deg) => [
   CX + Math.cos(deg * DEG) * radius,
   CY + Math.sin(deg * DEG) * radius,
 ];
 
-const round3 = (v) => Number(v.toFixed(3));
-const toPath = (points) =>
-  points.map(([x, y], i) => `${i === 0 ? "M" : "L"} ${round3(x)} ${round3(y)}`).join(" ");
+const r3 = (v) => Number(v.toFixed(3));
+const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
 
-// Sector anular entre dos angulos, recorriendo el arco en pasos de 5 grados
-// como lo hace el triangulado original.
-function sectorPath(fromDeg, toDeg) {
-  const angles = [];
-  for (let a = fromDeg; a < toDeg - 0.001; a += 5) angles.push(a);
-  angles.push(toDeg);
-
-  const outer = angles.map((a) => polar(R_SCALE + R_TICK_LONG, a));
-  const inner = angles.map((a) => polar(R_SCALE, a)).reverse();
-
-  return `${toPath(outer)} ${toPath(inner)} Z`;
+// Arco de circunferencia entre dos porcentajes de la escala (0-100).
+// Un solo subpath: evita el relleno raro del triangulado original.
+function arcPath(radius, fromPct, toPct) {
+  const [x0, y0] = polar(radius, fromPct - 50 - 90);
+  const [x1, y1] = polar(radius, toPct - 50 - 90);
+  return `M ${r3(x0)} ${r3(y0)} A ${radius} ${radius} 0 0 1 ${r3(x1)} ${r3(y1)}`;
 }
 
-// dtostrf(value, 5, 1, buf)
-const fmtValue = (value) => value.toFixed(1).padStart(5, "0");
+// Ticks y posiciones de las 5 etiquetas: no dependen de las props
+const TICKS = [];
+for (let i = SCALE_DEG_FROM; i <= SCALE_DEG_TO; i += 5) {
+  const major = i % 25 === 0;
+  const [x1, y1] = polar(R_TICK, i - 90);
+  const [x2, y2] = polar(R_TICK - (major ? TICK_LONG : TICK_SHORT), i - 90);
+  TICKS.push({ deg: i, major, x1: r3(x1), y1: r3(y1), x2: r3(x2), y2: r3(y2) });
+}
 
-// La aguja se mueve de a 1 unidad cada 10 ms y frena al acercarse
-// (updateNeedle con ms_delay por defecto).
-function useNeedle(target) {
+const LABEL_POS = [-50, -25, 0, 25, 50].map((deg) => {
+  const [x, y] = polar(R_LABEL, deg - 90);
+  return { deg, x: r3(x), y: r3(y) };
+});
+
+// Suaviza el movimiento de la aguja. Trabaja en % de escala, no en unidades
+// del dato: asi RPM (miles) y km/h (cientos) tardan lo mismo en asentarse.
+function useNeedle(targetPct) {
   const [shown, setShown] = useState(0);
   const shownRef = useRef(0);
 
   useEffect(() => {
-    let ms = 10;
-    let timer = null;
-    let current = shownRef.current;
+    let raf = 0;
+    let last = performance.now();
 
-    const step = () => {
-      const diff = target - current;
-      if (Math.abs(diff) < 1e-4) {
-        timer = null;
+    const tick = (now) => {
+      const dt = now - last;
+      last = now;
+
+      const diff = targetPct - shownRef.current;
+      if (Math.abs(diff) < 0.05) {
+        shownRef.current = targetPct;
+        setShown(targetPct);
         return;
       }
-      current += diff > 0 ? 1 : -1;
-      shownRef.current = current;
-      setShown(current);
-      if (Math.abs(target - current) < 10) ms += ms / 5;
-      timer = setTimeout(step, ms);
+
+      shownRef.current += diff * (1 - Math.exp(-dt / 110));
+      setShown(shownRef.current);
+      raf = requestAnimationFrame(tick);
     };
 
-    if (current !== target) timer = setTimeout(step, ms);
-
-    return () => {
-      if (timer) clearTimeout(timer);
-    };
-  }, [target]);
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [targetPct]);
 
   return shown;
-}
-
-// Ancho de avance, alto y linea de base de las fuentes de TFT_eSPI.
-// En drawString() la coordenada y es el borde superior del glifo.
-const FONT_METRICS = {
-  2: { advance: 8, size: 16, baseline: 12 },
-  4: { advance: 16, size: 26, baseline: 19 },
-};
-
-function TftText({ x, y, value, font = 2, anchor = "start", className = "" }) {
-  const text = String(value);
-  if (!text.length) return null;
-  const { advance, size, baseline } = FONT_METRICS[font] ?? FONT_METRICS[2];
-
-  return (
-    <text
-      className={`tft-gauge__text tft-gauge__text--f${font} ${className}`}
-      x={x}
-      y={y + baseline}
-      fontSize={size}
-      textAnchor={anchor}
-      textLength={text.length * advance}
-      lengthAdjust="spacingAndGlyphs"
-    >
-      {text}
-    </text>
-  );
 }
 
 export default function MeterGauge({
@@ -136,70 +99,42 @@ export default function MeterGauge({
   fullScale = 100,
   label = "",
   unit = "",
+  decimals = 0,
   scaleLabels = ["0", "25", "50", "75", "100"],
   zones = null,
   className = "",
 }) {
-  const needleValue = useNeedle(value);
+  const safeValue = Number.isFinite(value) ? value : 0;
+  const targetPct = clamp(
+    (safeValue * 100) / (fullScale || 1),
+    NEEDLE_VAL_FROM,
+    NEEDLE_VAL_TO,
+  );
+  const shown = useNeedle(targetPct);
 
-  const { zonePaths, ticks, arcPoints, scaleTexts } = useMemo(() => {
-    const zonePaths = ZONE_ORDER.filter(
-      ([key]) => zones?.[key] && zones[key][1] > zones[key][0],
-    ).map(([key, color]) => {
-      const from = Math.max(SCALE_DEG_FROM, zones[key][0] - 50);
-      const to = Math.min(SCALE_DEG_TO, zones[key][1] - 50);
-      return { key, color, d: sectorPath(from - 90, to - 90) };
-    });
+  const zonePaths = useMemo(
+    () =>
+      ZONE_ORDER.filter(
+        (key) => zones?.[key] && zones[key][1] > zones[key][0],
+      ).map((key) => ({
+        key,
+        d: arcPath(
+          R_BAND,
+          clamp(zones[key][0], 0, 100),
+          clamp(zones[key][1], 0, 100),
+        ),
+      })),
+    [zones],
+  );
 
-    const ticks = [];
-    const arcPoints = [];
-    for (let i = SCALE_DEG_FROM; i <= SCALE_DEG_TO; i += 5) {
-      const radius = i % 25 === 0 ? R_TICK_LONG : R_TICK_SHORT;
-      ticks.push({
-        deg: i,
-        from: polar(R_SCALE, i - 90),
-        to: polar(R_SCALE + radius, i - 90),
-      });
-      arcPoints.push(polar(R_SCALE, i - 90));
-    }
+  const needleDeg =
+    NEEDLE_DEG_FROM +
+    ((shown - NEEDLE_VAL_FROM) * (NEEDLE_DEG_TO - NEEDLE_DEG_FROM)) /
+      (NEEDLE_VAL_TO - NEEDLE_VAL_FROM);
 
-    const scaleTexts = [-50, -25, 0, 25, 50].map((deg, idx) => {
-      const [x, y] = polar(R_LABEL, deg - 90);
-      return {
-        idx,
-        text: scaleLabels[idx],
-        x,
-        y: y + LABEL_Y_TWEAK[deg],
-      };
-    });
-
-    return { zonePaths, ticks, arcPoints, scaleTexts };
-  }, [zones, scaleLabels]);
-
-  // factor = 100 / fullScale ; value = val * factor
-  // angulo = map(value, -10, 110, -150, -30)
-  const needleDeg = (() => {
-    const clamped = Math.min(
-      NEEDLE_VAL_TO,
-      Math.max(NEEDLE_VAL_FROM, (needleValue * 100) / fullScale),
-    );
-    return (
-      NEEDLE_DEG_FROM +
-      ((clamped - NEEDLE_VAL_FROM) * (NEEDLE_DEG_TO - NEEDLE_DEG_FROM)) /
-        (NEEDLE_VAL_TO - NEEDLE_VAL_FROM)
-    );
-  })();
-
-  // La base de la aguja no llega al pivote: esta a 20 px de altura y
-  // desplazada segun tan(angulo + 90), tal cual updateNeedle().
-  const needleTail = [CX + 20 * Math.tan((needleDeg + 90) * DEG), CY - 20];
-  const needleTip = polar(R_NEEDLE, needleDeg);
-
-  const needleLines = [
-    { key: "l", dx: -1, color: TFT_RED },
-    { key: "c", dx: 0, color: TFT_MAGENTA },
-    { key: "r", dx: 1, color: TFT_RED },
-  ];
+  // Igual que updateNeedle(): la aguja arranca 20 px arriba del pivote
+  const tail = [CX + 20 * Math.tan((needleDeg + 90) * DEG), CY - 20];
+  const tip = polar(R_NEEDLE, needleDeg);
 
   return (
     <svg
@@ -207,82 +142,103 @@ export default function MeterGauge({
       viewBox="0 0 240 128"
       preserveAspectRatio="xMidYMid meet"
       role="img"
-      aria-label={`${label} ${value}`}
+      aria-label={`${label} ${safeValue.toFixed(decimals)} ${unit}`}
     >
-      {/* Marco gris y fondo blanco del widget */}
-      <rect className="tft-gauge__frame" x="0" y="0" width="239" height="126" fill={TFT_GREY} />
-      <rect className="tft-gauge__frame" x="5" y="3" width="230" height="119" fill={TFT_WHITE} />
+      <rect
+        className="tft-gauge__face"
+        x="0.5"
+        y="0.5"
+        width="239"
+        height="127"
+        rx="10"
+      />
 
-      {/* Zonas de color */}
+      {/* Pista de fondo + zonas de color */}
+      <path className="tft-gauge__track" d={arcPath(R_BAND, 0, 100)} />
       {zonePaths.map((zone) => (
-        <path key={zone.key} d={zone.d} fill={zone.color} />
-      ))}
-
-      {/* Ticks cada 5 grados */}
-      {ticks.map((tick) => (
-        <line
-          key={tick.deg}
-          x1={round3(tick.from[0])}
-          y1={round3(tick.from[1])}
-          x2={round3(tick.to[0])}
-          y2={round3(tick.to[1])}
-          stroke={TFT_BLACK}
-          strokeWidth="1"
+        <path
+          key={zone.key}
+          className={`tft-gauge__zone tft-gauge__zone--${zone.key}`}
+          d={zone.d}
         />
       ))}
 
-      {/* Arco de la escala */}
-      <polyline
-        points={arcPoints.map(([x, y]) => `${round3(x)},${round3(y)}`).join(" ")}
-        fill="none"
-        stroke={TFT_BLACK}
-        strokeWidth="1"
-      />
+      {/* Ticks */}
+      {TICKS.map((t) => (
+        <line
+          key={t.deg}
+          className={
+            t.major
+              ? "tft-gauge__tick tft-gauge__tick--major"
+              : "tft-gauge__tick"
+          }
+          x1={t.x1}
+          y1={t.y1}
+          x2={t.x2}
+          y2={t.y2}
+        />
+      ))}
 
       {/* Valores de la escala */}
-      {scaleTexts.map((item) => (
-        <TftText
-          key={item.idx}
-          x={round3(item.x)}
-          y={round3(item.y)}
-          value={item.text}
-          anchor="middle"
-        />
-      ))}
+      {LABEL_POS.map((p, idx) =>
+        scaleLabels[idx] ? (
+          <text
+            key={p.deg}
+            className="tft-gauge__scale"
+            x={p.x}
+            y={p.y}
+            textAnchor="middle"
+            dominantBaseline="central"
+          >
+            {scaleLabels[idx]}
+          </text>
+        ) : null,
+      )}
 
-      {/* Etiqueta grande central y unidad abajo a la derecha */}
-      <TftText x={CX} y={70} value={label} font={4} anchor="middle" className="tft-gauge__title" />
-      <TftText x={195} y={99} value={unit} />
+      {/* Titulo tenue al centro; la aguja pasa por encima */}
+      <text
+        className="tft-gauge__title"
+        x={CX}
+        y="98"
+        textAnchor="middle"
+        dominantBaseline="central"
+      >
+        {label}
+      </text>
 
-      {/* Marco negro */}
-      <rect
-        className="tft-gauge__frame"
-        x="5.5"
-        y="3.5"
-        width="229"
-        height="118"
-        fill="none"
-        stroke={TFT_BLACK}
-        strokeWidth="1"
-      />
-
-      {/* Valor digital */}
-      <TftText x={50} y={99} value={fmtValue(value)} anchor="end" />
+      {/* Valor digital y unidad */}
+      <text
+        className="tft-gauge__value"
+        x="14"
+        y="116"
+        dominantBaseline="central"
+      >
+        {safeValue.toFixed(decimals)}
+      </text>
+      <text
+        className="tft-gauge__unit"
+        x="226"
+        y="116"
+        textAnchor="end"
+        dominantBaseline="central"
+      >
+        {unit}
+      </text>
 
       {/* Aguja */}
-      <g>
-        {needleLines.map((line) => (
-          <line
-            key={line.key}
-            x1={round3(needleTail[0] + line.dx)}
-            y1={round3(needleTail[1])}
-            x2={round3(needleTip[0] + line.dx)}
-            y2={round3(needleTip[1])}
-            stroke={line.color}
-            strokeWidth="1"
-          />
-        ))}
-      </g>
+      <line
+        className="tft-gauge__needle"
+        x1={r3(tail[0])}
+        y1={r3(tail[1])}
+        x2={r3(tip[0])}
+        y2={r3(tip[1])}
+      />
+      <circle
+        className="tft-gauge__hub"
+        cx={r3(tail[0])}
+        cy={r3(tail[1])}
+        r="4"
+      />
     </svg>
   );
 }

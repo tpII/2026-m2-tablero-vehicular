@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMqtt } from "./useMqtt";
 
 // Datos crudos: los valores que manda el ESP32 en vehiculo/m2/telemetria
@@ -35,30 +35,48 @@ function nextMock(prev) {
 // Une los datos reales del ESP32 con el simulador de respaldo: el panel nunca
 // se queda sin valores, y si el ESP32 se desconecta seguimos viendo algo.
 export default function useTelemetry() {
-  const { status, data, lastSeen } = useMqtt();
+  const { status, data: mqttData, lastSeen, lastMessage } = useMqtt();
   const [mock, setMock] = useState(MOCK_DATA);
   const [now, setNow] = useState(() => Date.now());
 
+  const connected = status === "conectado";
+  const live = connected && mqttData !== null && now - lastSeen < STALE_MS;
+
+  // El simulador solo corre cuando no hay telemetria real. Con el ESP32
+  // conectado, generar valores al azar cada 1.5s no suma nada: el panel ya
+  // muestra los datos de verdad.
   useEffect(() => {
+    if (live) return undefined;
+
     const id = setInterval(() => setMock(nextMock), MOCK_PERIOD_MS);
     return () => clearInterval(id);
-  }, []);
+  }, [live]);
 
-  // Reloj para detectar que los datos envejecieron (nadie re-renderiza solo)
+  // Reloj para detectar que los datos envejecieron (nadie re-renderiza solo).
+  // Solo hace falta mientras hay datos vivos: si estamos mostrando el
+  // simulador no hay nada que pueda quedar viejo.
   useEffect(() => {
-    if (status !== "conectado") return undefined;
+    if (!live) return undefined;
 
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
-  }, [status]);
+  }, [live]);
 
-  const connected = status === "conectado";
-  const live = connected && data !== null && now - lastSeen < STALE_MS;
+  // Fusionar dentro de useMemo mantiene la misma referencia mientras no cambien
+  // las entradas. Armar el objeto en linea devolvia una referencia nueva en cada
+  // render, y eso hacia disparar en bucle los efectos que dependen de `data`.
+  const data = useMemo(
+    () => (live ? { ...mock, ...mqttData } : mock),
+    [live, mock, mqttData],
+  );
 
   return {
-    data: live ? { ...mock, ...data } : mock,
+    data,
     source: live ? "esp32" : "mock",
     status: live ? "conectado" : connected ? "sin-datos" : status,
     lastSeen,
+    // Se pasa sin transformar: la consola de pruebas necesita el payload crudo
+    // y el veredicto del parser, no solo los datos ya validados.
+    lastMessage,
   };
 }

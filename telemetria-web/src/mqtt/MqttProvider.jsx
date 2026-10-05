@@ -8,9 +8,18 @@ import { MQTT_TOPIC, MQTT_URL, parseTelemetry } from "./mqttConfig";
 export default function MqttProvider({ children }) {
   const [status, setStatus] = useState("conectando");
   const [data, setData] = useState(null);
-  const [raw, setRaw] = useState(null);
   const [lastSeen, setLastSeen] = useState(0);
-  const [messages, setMessages] = useState(0);
+
+  // Ultimo mensaje recibido, sea o no telemetria valida. `seq` avanza con cada
+  // mensaje y `ok` guarda si parseTelemetry lo acepto, para que la consola de
+  // pruebas pueda mostrar tambien lo que no pudo interpretar en vez de
+  // esconderlo. Va en un unico state para no disparar tres renders por mensaje.
+  const [lastMessage, setLastMessage] = useState({
+    seq: 0,
+    payload: "",
+    ok: false,
+    at: 0,
+  });
 
   useEffect(() => {
     const client = mqtt.connect(MQTT_URL, {
@@ -33,20 +42,28 @@ export default function MqttProvider({ children }) {
       const payload = message.toString();
       const parsed = parseTelemetry(payload);
 
-      setMessages((prev) => prev + 1);
-      setRaw(payload);
+      // Solo lo que parsea avanza los datos del panel; el LWT retained
+      // ("online"/"offline") y el JSON corrupto no los tocan.
       if (parsed) {
         setData(parsed);
         setLastSeen(Date.now());
       }
+
+      // Pero todos los mensajes se cuentan, validos o no.
+      setLastMessage((prev) => ({
+        seq: prev.seq + 1,
+        payload,
+        ok: parsed !== null,
+        at: Date.now(),
+      }));
     });
 
     return () => client.end(true);
   }, []);
 
   const value = useMemo(
-    () => ({ url: MQTT_URL, topic: MQTT_TOPIC, status, data, raw, lastSeen, messages }),
-    [status, data, raw, lastSeen, messages],
+    () => ({ url: MQTT_URL, topic: MQTT_TOPIC, status, data, lastSeen, lastMessage }),
+    [status, data, lastSeen, lastMessage],
   );
 
   return <MqttContext.Provider value={value}>{children}</MqttContext.Provider>;
