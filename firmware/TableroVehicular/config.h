@@ -19,6 +19,11 @@
 #define PUBLISH_INTERVAL_MS 1000
 #define MAX_RPM             8000
 
+// ---------------------------------------------------------------- Sensores
+// El potenciometro va a un pin de ADC1 (32-39). Los de ADC2 no funcionan
+// mientras el WiFi esta activo.
+#define PIN_POTENCIOMETRO 35
+
 // ---------------------------------------------------------------- Pantalla
 // Pines del ST7789. Se=configuran en el bloque 3, junto con User_Setup.h
 // de TFT_eSPI. Ajusta CS si tuDisplay lo tiene conectado.
