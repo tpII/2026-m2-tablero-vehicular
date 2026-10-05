@@ -135,3 +135,14 @@ Actividades realizadas
 Inconvenientes
 
 - Al probar el driver de motor L9110S, el motor no respondió. Probamos el motor por separado, alimentándolo directamente, y funcionó correctamente. Por ahora no sabemos si la falla está en el driver o en el conexionado o la señal de control. Queda pendiente aislar el driver y probarlo por separado.
+
+## 2026-10-05 - Iacobucci, Platz, Prieto
+
+Actividades realizadas
+
+- Se amplió la estructura del firmware del tablero vehicular incorporando los módulos Comunicaciones, Pantalla, Sensores, Telemetría y Potenciómetro, separando las distintas funcionalidades del sistema.
+- Se ajustó la configuración del firmware para permitir la captura y el envío de los datos de telemetría desde el ESP32 hacia la aplicación web.
+- Se modificó la comunicación mediante MQTT para recibir en la aplicación web los datos enviados por el tablero y utilizarlos en la visualización de las mediciones.
+- Se actualizaron los componentes visuales del dashboard, incluyendo MeterGauge y TftPanel, junto con sus estilos correspondientes.
+- Se trabajó sobre las vistas Telemetry y MQTT-test, realizando ajustes en la visualización de las mediciones y en las pruebas de conexión y recepción de datos.
+- Se realizaron ajustes en la interfaz del tablero web para representar los distintos parámetros del vehículo, como velocidad, consumo, tensión y otras mediciones.
