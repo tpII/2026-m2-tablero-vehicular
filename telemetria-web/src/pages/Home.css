@@ -1,0 +1,88 @@
+.home {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.home__header {
+    text-align: center;
+}
+
+.home__title {
+    margin: 0;
+    color: #f3f4f6;
+}
+
+.home__subtitle {
+    margin: 0.5rem 0 0;
+    color: #9ca3af;
+    font-size: 0.9rem;
+}
+
+.home__footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    color: #9ca3af;
+    font-family: "Share Tech Mono", monospace;
+    font-size: 0.85rem;
+    text-align: center;
+}
+
+.home__badge {
+    padding: 0.15rem 0.5rem;
+    border: 1px solid #f59e0b;
+    border-radius: 4px;
+    color: #f59e0b;
+    font-size: 0.7rem;
+    letter-spacing: 1px;
+}
+
+.home__badge--live {
+    border-color: #10b981;
+    color: #10b981;
+}
+
+/* === TABLERO === */
+
+.tft-stage {
+    display: flex;
+    justify-content: center;
+}
+
+.tft-frame {
+    container-type: inline-size;
+    width: 100%;
+    max-width: 860px;
+    padding: 12px;
+    border-radius: 18px;
+    background: linear-gradient(180deg, #111827, #0b1220);
+    border: 1px solid #1f2937;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+}
+
+.tft-screen {
+    /* 1 pixel logico = 1/320 del ancho del marco */
+    --px: 0.3125cqw;
+
+    position: relative;
+    display: grid;
+    /* Dos medidores de 240x128 apilados + columna digital de 80 px.
+       Son 320 x 256 => 5:4. Con 4:3 el medidor de RPM quedaba achicado. */
+    grid-template-columns: 3fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: calc(6 * var(--px));
+    box-sizing: border-box;
+    width: 100%;
+    aspect-ratio: 5 / 4;
+    padding: calc(8 * var(--px));
+    background: var(--tft-bg);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+/* El tablero ya no imita el barrido de lineas de la TFT */
+.tft-screen__scanlines {
+    display: none;
+}
