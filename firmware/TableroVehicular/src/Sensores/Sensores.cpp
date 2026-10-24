@@ -1,6 +1,7 @@
 #include "Sensores.h"
 
 #include "../../config.h"
+#include "../Motor/Motor.h"
 #include "../Potenciometro/Potenciometro.h"
 
 namespace {
@@ -54,22 +55,16 @@ void tomaLectura(unsigned long ahora, Telemetry* lectura) {
   velocidad = acerca(velocidad, velocidadObjetivo, 0.06f);
 
 #if USAR_POTENCIOMETRO_REAL
-  // El acelerador real manda; el resto sigue simulado
-  float acelerador = potenciometroLeePorcentaje();
+  // El potenciometro ya viene suavizado desde Potenciometro.cpp
+  potenciometro = potenciometroLeePorcentaje();
 #else
   // El acelerador responde a la diferencia entre velocidad deseada y real
   float acelerador = limita((velocidadObjetivo - velocidad) * 7.0f, 0.0f, 100.0f);
   if (velocidadObjetivo < velocidad) acelerador = 0;
+  potenciometro = acerca(potenciometro, acelerador, 0.12f);
 #endif
 
-  potenciometro = acerca(potenciometro, acelerador, 0.12f);
-
-  // El alternador recarga por encima de 3000 rpm y consume el resto
-  if (calculaRpm(velocidad) > 3000) {
-    bateria = limita(bateria + 0.004f * segundos, 11.8f, 14.4f);
-  } else {
-    bateria = limita(bateria - 0.00008f * segundos, 11.8f, 14.4f);
-  }
+  motorEscribePorcentaje(potenciometro);
 
   lectura->velocidad = velocidad;
   lectura->rpm = calculaRpm(velocidad);
@@ -84,6 +79,7 @@ void tareaSensores(void* parametro) {
 #if USAR_POTENCIOMETRO_REAL
   potenciometroInicia();
 #endif
+  motorInicia();
 
   Telemetry lectura;
 
