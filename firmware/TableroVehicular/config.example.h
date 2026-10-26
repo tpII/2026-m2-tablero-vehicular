@@ -13,6 +13,7 @@
 #define MQTT_HOST      "10.0.22.205"
 #define MQTT_PORT      1883
 #define MQTT_TOPIC     "vehiculo/m2/telemetria"
+#define MQTT_STATUS_TOPIC "vehiculo/m2/estado"
 #define MQTT_CLIENT_ID "tablero-vehicular"
 
 // ---------------------------------------------------------------- Cadencia

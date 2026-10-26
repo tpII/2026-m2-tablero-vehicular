@@ -39,7 +39,7 @@ const THR_ZONES = [
 ];
 
 export default function Home() {
-  const { data, source, status } = useTelemetry();
+  const { data, source, status, deviceStatus } = useTelemetry();
 
   const batPercent = ((data.bateria - BAT_MIN) / (BAT_MAX - BAT_MIN)) * 100;
   const batLow = data.bateria < BAT_LOW;
@@ -104,7 +104,7 @@ export default function Home() {
           {live ? "ESP32" : "MOCK"}
         </span>
         <span>
-          {status} · {live ? "MQTT" : "datos simulados"} · {data.velocidad} km/h · {data.rpm}{" "}
+          Broker: {status} · ESP32: {deviceStatus} · {live ? "MQTT" : "datos simulados"} · {data.velocidad} km/h · {data.rpm}{" "}
           rpm · thr {data.potenciometro}% · {data.bateria} v
         </span>
       </footer>

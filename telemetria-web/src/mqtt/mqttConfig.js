@@ -1,9 +1,11 @@
 // Configuracion del broker. Se puede fijar en el build con VITE_MQTT_URL /
-// VITE_MQTT_TOPIC, o desde la consola MQTT con localStorage ("mqtt.url").
+// VITE_MQTT_TOPIC / VITE_MQTT_STATUS_TOPIC, o desde la consola MQTT con
+// localStorage ("mqtt.url").
 // La IP es la del PC que corre Mosquitto; sirve tanto desde el navegador de
 // esa misma maquina como desde un movil en la misma red.
 const DEFAULT_URL = "ws://10.51.117.217:9001";
 const DEFAULT_TOPIC = "vehiculo/m2/telemetria";
+const DEFAULT_STATUS_TOPIC = "vehiculo/m2/estado";
 
 export const MQTT_URL =
   import.meta.env.VITE_MQTT_URL ||
@@ -14,6 +16,11 @@ export const MQTT_TOPIC =
   import.meta.env.VITE_MQTT_TOPIC ||
   localStorage.getItem("mqtt.topic") ||
   DEFAULT_TOPIC;
+
+export const MQTT_STATUS_TOPIC =
+  import.meta.env.VITE_MQTT_STATUS_TOPIC ||
+  localStorage.getItem("mqtt.statusTopic") ||
+  DEFAULT_STATUS_TOPIC;
 
 // Campos numericos que aceptamos del ESP32
 const FIELDS = ["velocidad", "rpm", "maxRpm", "potenciometro", "bateria"];

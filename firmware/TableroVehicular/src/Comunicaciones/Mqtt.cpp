@@ -69,9 +69,9 @@ void mantieneMqtt(unsigned long ahora) {
   ultimoIntentoMqtt = ahora;
 
   String clientId = String(MQTT_CLIENT_ID) + "-" + WiFi.macAddress();
-  if (mqtt.connect(clientId.c_str(), MQTT_TOPIC, 0, true, "offline")) {
+  if (mqtt.connect(clientId.c_str(), MQTT_STATUS_TOPIC, 0, true, "offline")) {
     Serial.printf("[mqtt] conectado como %s\n", clientId.c_str());
-    mqtt.publish(MQTT_TOPIC, "online", true);
+    mqtt.publish(MQTT_STATUS_TOPIC, "online", true);
   } else {
     Serial.printf("[mqtt] fallo, estado %d\n", mqtt.state());
   }

@@ -37,7 +37,7 @@ const mockPower = {
 };
 
 export default function Telemetry() {
-  const { data, source, status, lastSeen } = useTelemetry();
+  const { data, source, status, deviceStatus, lastSeen } = useTelemetry();
   const live = source === "esp32";
 
   // Referencias para SmoothieCharts
@@ -138,7 +138,7 @@ export default function Telemetry() {
             color: live ? "#10b981" : "#f59e0b",
           }}
         >
-          {live ? "ESP32" : "SIN DATOS"} · {status}
+          {live ? "TELEMETRÍA EN VIVO" : "SIN DATOS"} · Broker: {status} · ESP32: {deviceStatus}
         </span>
       </div>
 

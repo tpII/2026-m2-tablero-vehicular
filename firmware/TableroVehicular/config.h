@@ -13,6 +13,7 @@
 #define MQTT_HOST "10.51.117.217"
 #define MQTT_PORT 1883
 #define MQTT_TOPIC "vehiculo/m2/telemetria"
+#define MQTT_STATUS_TOPIC "vehiculo/m2/estado"
 #define MQTT_CLIENT_ID "tablero-vehicular"
 
 // ---------------------------------------------------------------- Cadencia
@@ -52,7 +53,8 @@
 #define USAR_POTENCIOMETRO_REAL 1
 
 // ---------------------------------------------------------------- Motor
-// Control por puente H L298N: ENA con jumper a +5V, IN2 fijo a GND y PWM en IN1.
+// Control por puente H L298N: ENA con jumper a +5V, IN2 fijo a GND y PWM en
+// IN1.
 #define PIN_MOTOR_IN1 25
 
 // ---------------------------------------------------------------- Pantalla

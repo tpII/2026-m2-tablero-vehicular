@@ -13,7 +13,7 @@ const COLOR_POR_ESTADO = {
 };
 
 export default function MQTTTest() {
-  const { source, status, lastMessage } = useTelemetry();
+  const { source, status, deviceStatus, lastMessage } = useTelemetry();
   const live = source === "esp32";
 
   // Estado para almacenar el historial de mensajes
@@ -37,6 +37,7 @@ export default function MQTTTest() {
     const newLog = {
       id: nextLogId.current++,
       time: new Date(lastMessage.at).toLocaleTimeString(),
+      topic: lastMessage.topic,
       ok: lastMessage.ok,
       payload: lastMessage.payload,
     };
@@ -117,7 +118,7 @@ export default function MQTTTest() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "1fr 1fr 1fr",
+          gridTemplateColumns: "repeat(4, 1fr)",
           gap: "1.5rem",
         }}
       >
@@ -142,6 +143,35 @@ export default function MQTTTest() {
             }}
           >
             {status || "Desconectado"}
+          </div>
+        </div>
+
+        <div
+          className="dashboard-card"
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "1.5rem",
+          }}
+        >
+          <h4 className="card-title" style={{ margin: "0 0 10px 0" }}>
+            Estado del ESP32
+          </h4>
+          <div
+            style={{
+              fontSize: "1.2rem",
+              fontWeight: "bold",
+              color:
+                deviceStatus === "online"
+                  ? "#10b981"
+                  : deviceStatus === "offline"
+                    ? "#ef4444"
+                    : "#9ca3af",
+            }}
+          >
+            {deviceStatus}
           </div>
         </div>
 
@@ -272,7 +302,7 @@ export default function MQTTTest() {
                   [{log.ok ? "json" : "raw"}]
                 </span>
                 <span style={{ color: "#e5e7eb", wordBreak: "break-all" }}>
-                  {log.payload}
+                  {log.topic}: {log.payload}
                 </span>
               </div>
             ))

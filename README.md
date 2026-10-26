@@ -19,7 +19,9 @@ Esta guía establece los requerimientos, procedimientos de configuración y prot
 
 - **Publicación de Telemetría (ESP32 / Simulador):** Puerto `1883` (`mqtt/tcp`).
 - **Suscripción de Cliente Web (Dashboard):** Puerto `9001` (`mqtt/websockets`).
-- **Tópico/Topic por Defecto:** `vehiculo/m2/telemetria`
+- **Tópicos por defecto:**
+  - `vehiculo/m2/telemetria`: objeto JSON con las mediciones periódicas del vehículo.
+  - `vehiculo/m2/estado`: estado retained del dispositivo (`online` / `offline`).
 
 ### 2.2 Configuración del Servicio Mosquitto
 
@@ -68,8 +70,11 @@ Cree el archivo de variables de entorno `.env.local` en el directorio `telemetri
 ```dotenv
 VITE_MQTT_URL=ws://<IP_DEL_BROKER>:9001
 VITE_MQTT_TOPIC=vehiculo/m2/telemetria
+VITE_MQTT_STATUS_TOPIC=vehiculo/m2/estado
 
 ```
+
+El dashboard se suscribe a ambos tópicos: usa `/telemetria` para actualizar las mediciones y `/estado` para mostrar la disponibilidad del ESP32. El estado de conexión al broker (WebSocket) se informa por separado.
 
 _(Para despliegues locales sobre el mismo host, puede emplearse `ws://localhost:9001`)._
 
@@ -109,6 +114,7 @@ Con el servicio de Mosquitto activo, ejecute el script de PowerShell desde la ra
 ```
 
 - **Parámetros Opcionales:** Utilice `-Segundos <N>` para delimitar la duración del envío (ej. `-Segundos 30`). Por defecto, la publicación mantiene un intervalo de `1 Hz` (1 segundo) hasta la interrupción manual (`Ctrl+C`).
+- El simulador publica el JSON en `vehiculo/m2/telemetria` y el estado retained en `vehiculo/m2/estado`: `online` al comenzar y `offline` al terminar. Puede cambiar los tópicos con `-Topic` y `-StatusTopic`.
 
 ---
 
@@ -136,7 +142,8 @@ Edite `firmware/TableroVehicular/config.h` e ingrese los parámetros de red:
 - `WIFI_PASSWORD`: Clave de acceso Wi-Fi.
 - `MQTT_HOST`: Dirección IP estática o reservada del servidor/PC donde ejecuta Mosquitto (evite usar `localhost`).
 - `MQTT_PORT`: `1883`
-- `MQTT_TOPIC`: Debe coincidir estrictamente con el tópico suscrito por la interfaz web.
+- `MQTT_TOPIC`: Tópico del JSON periódico; debe coincidir con `VITE_MQTT_TOPIC`.
+- `MQTT_STATUS_TOPIC`: Tópico del estado `online`/`offline`; debe coincidir con `VITE_MQTT_STATUS_TOPIC`. El firmware publica `online` retained y configura `offline` como Last Will retained.
 
 ### 5.3 Flasheo e Inspección
 
@@ -151,6 +158,7 @@ Edite `firmware/TableroVehicular/config.h` e ingrese los parámetros de red:
 | Anomalía / Error                                                   | Causa Probable                            | Acción Correctiva                                                                                                                     |
 | ------------------------------------------------------------------ | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | **Fallo de conexión WebSocket en la App Web**                      | Listener inaccesible o puerto bloqueado.  | Verifique que `mosquitto.conf` contenga el listener `9001` activo. Acepte las reglas de tráfico entrante en el firewall de Windows.   |
-| **Cliente MQTT conecta, pero no renderiza datos del ESP32**        | Discrepancia de tópicos o IP errónea.     | Verifique la coincidencia exacta de `VITE_MQTT_TOPIC` y `MQTT_TOPIC`. Confirme que el ESP32 resolvió la dirección IP de `MQTT_HOST`.  |
+| **Cliente MQTT conecta, pero no renderiza datos del ESP32**        | Discrepancia de tópico de telemetría o IP errónea. | Verifique que `VITE_MQTT_TOPIC` coincida con `MQTT_TOPIC` (`vehiculo/m2/telemetria`) y que el ESP32 resolvió la dirección IP de `MQTT_HOST`. |
+| **El dashboard muestra el ESP32 como desconocido**                 | No llega el estado del dispositivo o los tópicos no coinciden. | Verifique que `VITE_MQTT_STATUS_TOPIC` coincida con `MQTT_STATUS_TOPIC` (`vehiculo/m2/estado`) y que el firmware esté conectado al broker. |
 | **Fallo en la ejecución del script de simulación**                 | Falta del ejecutable `mosquitto_pub.exe`. | Valide la instalación de Mosquitto en la ruta estándar `C:\Program Files\mosquitto\`.                                                 |
 | **Error de inclusión o compilación (`TFT_eSPI` / `PubSubClient`)** | Estructura de librerías incorrecta.       | Asegúrese de situar la carpeta `TFT_eSPI` directamente en `firmware/TableroVehicular/src/TFT_eSPI` y restrinja la versión a `2.5.43`. |
