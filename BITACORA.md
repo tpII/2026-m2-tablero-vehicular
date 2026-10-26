@@ -153,6 +153,7 @@ Inconveniente
 
 - Tras aislar el driver y probar alimentar las señales de control, se determina que la falla radica en el módulo puente H L9110S.
 
+<<<<<<< HEAD
 ## 2026-10-19 - Iacobucci, Platz, Prieto
 
 Actividades realizadas
@@ -169,3 +170,10 @@ Actividades realizadas
 
 Inconvenientes
 - Se observó una zona muerta en la primera mitad del recorrido del potenciómetro donde el motor recibe tensión (emite un zumbido por la frecuencia del PWM) pero no llega a girar. Esto se debe a la caída de tensión interna del L298N (~1.5V a 2V) alimentado con 5V, sumada al par necesario para vencer la fricción inicial del motor.
+=======
+## 2026-10-26 - Prieto
+
+Actividades realizadas
+
+- Separación de la telemetría periódica y el estado del dispositivo en tópicos MQTT independientes: vehiculo/m2/telemetria y vehiculo/m2/estado.
+>>>>>>> origin
