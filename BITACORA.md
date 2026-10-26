@@ -147,7 +147,6 @@ Actividades realizadas
 - Se trabajó sobre las vistas Telemetry y MQTT-test, realizando ajustes en la visualización de las mediciones y en las pruebas de conexión y recepción de datos.
 - Se realizaron ajustes en la interfaz del tablero web para representar los distintos parámetros del vehículo, como velocidad, consumo, tensión y otras mediciones.
 
-
 ## 2026-10-05 - Platz
 
 Inconveniente
