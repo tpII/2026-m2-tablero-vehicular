@@ -1,5 +1,5 @@
-# Documentación Técnica de Despliegue y Operación: Tablero de Telemetría
-
+# Tablero Vehicular
+## Guía de Uso y Configuración
 Esta guía establece los requerimientos, procedimientos de configuración y protocolo de ejecución para la puesta en marcha del tablero de telemetría vehicular, utilizando datos simulados o telemetría en tiempo real desde un microcontrolador ESP32.
 
 ---
