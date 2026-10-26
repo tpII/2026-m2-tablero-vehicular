@@ -152,3 +152,20 @@ Actividades realizadas
 Inconveniente
 
 - Tras aislar el driver y probar alimentar las señales de control, se determina que la falla radica en el módulo puente H L9110S.
+
+## 2026-10-19 - Iacobucci, Platz, Prieto
+
+Actividades realizadas
+
+- Recepción del L298N, reemplazo del L9110S
+- Testeo de funcionamiento del L298N tanto aislado como con el ESP32: funcionamiento correcto
+- Limpieza del repositorio
+
+## 2026-10-23 - Platz
+
+Actividades realizadas
+
+- Implementación e integración del control del motor dentro de la tarea de sensores
+
+Inconvenientes
+- Se observó una zona muerta en la primera mitad del recorrido del potenciómetro donde el motor recibe tensión (emite un zumbido por la frecuencia del PWM) pero no llega a girar. Esto se debe a la caída de tensión interna del L298N (~1.5V a 2V) alimentado con 5V, sumada al par necesario para vencer la fricción inicial del motor.

@@ -73,7 +73,6 @@ void tareaPantalla(void *parametro) {
       float value = 50.0 + 50.0 * sin((d + 0) * 0.0174532925);
 
       // La aguja superior marca el potenciometro real: escala 0 - 100
-      Serial.printf("Potenciometro: %.1f%%\n", porcentaje);
       amps.updateNeedle(porcentaje, 0);
 
       float voltage;
