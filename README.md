@@ -1,24 +1,29 @@
-# Guía de usuario
+# Documentación Técnica de Despliegue y Operación: Tablero de Telemetría
 
-Esta guía explica cómo preparar y ejecutar el tablero, ya sea para probar la
-interfaz con datos simulados o para recibir telemetría de un ESP32.
+Esta guía establece los requerimientos, procedimientos de configuración y protocolo de ejecución para la puesta en marcha del tablero de telemetría vehicular, utilizando datos simulados o telemetría en tiempo real desde un microcontrolador ESP32.
 
-## Requisitos
+---
 
-- Windows 10/11 y Git.
-- Node.js 22 LTS (incluye npm), para la aplicación web.
-- Mosquitto con soporte MQTT sobre TCP y WebSockets, para comunicar la web con
-  el simulador o el ESP32.
-- Arduino IDE 2.x y una placa ESP32, solo si se va a cargar el firmware.
+## 1. Requisitos del Sistema
 
-## 1. Preparar el broker MQTT
+- **Sistema Operativo y Control de Versiones:** Windows 10/11 y Git.
+- **Entorno de Ejecución Web:** Node.js 22 LTS (incluye ejecutable `npm`).
+- **Broker de Mensajería:** Eclipse Mosquitto con soporte para protocolos MQTT nativo (TCP) y MQTT over WebSockets.
+- **Entorno de Desarrollo Embedded:** Arduino IDE 2.x con soporte para arquitectura ESP32 (requerido únicamente para la compilación y despliegue del firmware).
 
-La placa y el simulador publican por MQTT/TCP en el puerto `1883`. La aplicación
-web se conecta al mismo broker mediante MQTT sobre WebSockets en el puerto
-`9001`. El tema usado por defecto es `vehiculo/m2/telemetria`.
+---
 
-Instala Mosquitto en el PC que actuará como broker y crea un archivo
-`mosquitto.conf` con estos listeners:
+## 2. Arquitectura e Instalación del Broker MQTT
+
+### 2.1 Esquema de Puertos y Protocolos
+
+- **Publicación de Telemetría (ESP32 / Simulador):** Puerto `1883` (`mqtt/tcp`).
+- **Suscripción de Cliente Web (Dashboard):** Puerto `9001` (`mqtt/websockets`).
+- **Tópico/Topic por Defecto:** `vehiculo/m2/telemetria`
+
+### 2.2 Configuración del Servicio Mosquitto
+
+Cree un archivo de configuración denominado `mosquitto.conf` en el directorio de ejecución del broker con la siguiente directiva de listeners:
 
 ```conf
 listener 1883
@@ -28,109 +33,124 @@ listener 9001
 protocol websockets
 
 allow_anonymous true
+
 ```
 
-Inicia el broker desde PowerShell, usando la ruta donde guardaste el archivo:
+### 2.3 Despliegue del Servicio
+
+Inicie el proceso del broker desde una terminal PowerShell especificando la ruta al archivo de configuración:
 
 ```powershell
 mosquitto -c .\mosquitto.conf -v
+
 ```
 
-`allow_anonymous true` sirve para pruebas en una red local confiable. No expongas
-estos puertos a Internet; limita el acceso con el firewall de Windows. Si la
-web se abre desde otro dispositivo, permite también el puerto `9001` en la red
-privada. El dispositivo debe poder alcanzar la IP del PC que ejecuta Mosquitto.
+> **Nota de Seguridad:** La directiva `allow_anonymous true` debe emplearse estrictamente en entornos de red local controlados. Habilite las reglas de entrada correspondientes en el Firewall de Windows para el puerto `9001` (red privada) si la aplicación cliente consume el servicio desde un host remoto dentro de la misma subred.
 
-## 2. Configurar e iniciar la aplicación web
+---
 
-Desde la raíz del repositorio:
+## 3. Configuración y Despliegue de la Aplicación Web
+
+### 3.1 Instalación de Dependencias
+
+Desde el directorio raíz del repositorio, ejecute la instalación limpia de paquetes:
 
 ```powershell
 cd .\telemetria-web
 npm ci
+
 ```
 
-Indica la dirección WebSocket del broker creando `telemetria-web/.env.local`.
-Reemplaza la IP por la dirección del PC donde corre Mosquitto:
+### 3.2 Variables de Entorno
+
+Cree el archivo de variables de entorno `.env.local` en el directorio `telemetria-web/`. Defina la dirección de conexión WebSocket apuntando a la IP de la interfaz de red del broker:
 
 ```dotenv
-VITE_MQTT_URL=ws://192.168.1.50:9001
+VITE_MQTT_URL=ws://<IP_DEL_BROKER>:9001
 VITE_MQTT_TOPIC=vehiculo/m2/telemetria
+
 ```
 
-Para abrir la web en el mismo PC se puede usar `ws://localhost:9001`. Para
-acceder desde otro dispositivo de la red, inicia Vite así y abre en ese
-dispositivo la URL que muestra la terminal:
+_(Para despliegues locales sobre el mismo host, puede emplearse `ws://localhost:9001`)._
+
+### 3.3 Ejecución en Modo Desarrollo
+
+Para exponer la interfaz web a la red local, inicie el servidor de desarrollo enlazando la interfaz `0.0.0.0`:
 
 ```powershell
 npm run dev -- --host 0.0.0.0
+
 ```
 
-La aplicación muestra el tablero en la ruta principal y el estado/contenido
-recibido del broker en **MQTT Test**. Si no llega telemetría válida, el tablero
-puede mostrar valores simulados; confirma el estado del broker en **MQTT Test**
-antes de asumir que los datos son reales.
+- **Ruta Principal (`/`):** Despliega el tablero de instrumentos. Si no se detecta un flujo válido de carga útil MQTT, el sistema renderizará valores simulados por defecto.
+- **Módulo de Diagnóstico (`/mqtt-test`):** Permite verificar el estado de la conexión WebSocket y validar los payloads entrantes.
 
-Para comprobar que el proyecto compila o ejecutar el linter:
+### 3.4 Validación de Código y Build
+
+Para comprobar la integridad del código fuente y realizar el empaquetado de producción:
 
 ```powershell
 npm run build
 npm run lint
+
 ```
 
-## 3. Probar sin conectar un ESP32 (opcional)
+---
 
-Instala Mosquitto en Windows: el simulador usa `mosquitto_pub.exe` en la ruta
-`C:\Program Files\mosquitto\mosquitto_pub.exe`. Con el broker ya iniciado,
-abre otra terminal en la raíz del repositorio y ejecuta:
+## 4. Simulador de Telemetría (Entorno de Pruebas)
+
+El script de simulación requiere la presencia del binario ejecutable `mosquitto_pub.exe` en la ruta predeterminada de instalación: `C:\Program Files\mosquitto\mosquitto_pub.exe`.
+
+Con el servicio de Mosquitto activo, ejecute el script de PowerShell desde la raíz del proyecto indicando la IP objetivo:
 
 ```powershell
-.\scripts\simular-esp32.ps1 -Host_ 192.168.1.50 -Port 1883
+.\scripts\simular-esp32.ps1 -Host_ <IP_DEL_BROKER> -Port 1883
+
 ```
 
-Reemplaza la IP por la del PC con el broker. El simulador publica cada segundo
-hasta que presiones `Ctrl+C`. Para limitar la prueba, agrega, por ejemplo,
-`-Segundos 30`.
+- **Parámetros Opcionales:** Utilice `-Segundos <N>` para delimitar la duración del envío (ej. `-Segundos 30`). Por defecto, la publicación mantiene un intervalo de `1 Hz` (1 segundo) hasta la interrupción manual (`Ctrl+C`).
 
-## 4. Preparar y cargar el firmware (opcional)
+---
 
-1. En Arduino IDE, instala el soporte de placas **esp32 by Espressif Systems**
-   desde Boards Manager y selecciona el modelo de ESP32 que estés usando.
-2. Instala la biblioteca **PubSubClient** desde Library Manager.
-3. Instala **TFT_eSPI** (versión 2.5.43) y copia su carpeta dentro de
-   `firmware/TableroVehicular/src/` con el nombre `TFT_eSPI`. El firmware incluye
-   esa biblioteca mediante una ruta local. Configura su `User_Setup.h` con el
-   controlador de pantalla y los pines correspondientes al módulo; los pines
-   previstos para este tablero están en `config.example.h`.
-4. Desde la raíz del repositorio, crea la configuración local:
+## 5. Compilación y Carga del Firmware (ESP32)
 
-   ```powershell
-   Copy-Item .\firmware\TableroVehicular\config.example.h `
-     .\firmware\TableroVehicular\config.h
-   ```
+### 5.1 Aprovisionamiento del Entorno en Arduino IDE
 
-5. Edita `firmware/TableroVehicular/config.h`: completa `WIFI_SSID` y
-   `WIFI_PASSWORD`, y cambia `MQTT_HOST` por la IP del PC con Mosquitto.
-   `MQTT_PORT` debe ser `1883` y `MQTT_TOPIC` debe coincidir con el configurado
-   para la web. No compartas ni subas `config.h`: contiene credenciales y está
-   excluido del repositorio.
-6. Abre `firmware/TableroVehicular/TableroVehicular.ino` en Arduino IDE,
-   selecciona el puerto serie de la placa y pulsa **Upload**. Abre el monitor
-   serie a `115200` baudios para revisar los mensajes de conexión Wi-Fi y MQTT.
+1. En **Boards Manager**, instale el paquete `esp32` de _Espressif Systems_ y seleccione la tarjeta objetivo.
+2. Desde el **Library Manager**, instale la biblioteca `PubSubClient`.
+3. Descargue e instale la biblioteca `TFT_eSPI` (v2.5.43). Copie el directorio de la librería en la ruta local del proyecto: `firmware/TableroVehicular/src/TFT_eSPI`.
+4. Configure el archivo `User_Setup.h` interno según las especificaciones del controlador de pantalla y la asignación de pines definida en `config.example.h`.
 
-El ESP32 y el PC con Mosquitto deben estar conectados a redes que puedan
-comunicarse entre sí. En `MQTT_HOST` usa la IP del PC en esa red; no uses
-`localhost`, porque para la placa eso apuntaría al propio ESP32.
+### 5.2 Configuración del Dispositivo
 
-## Solución de problemas
+Copie la plantilla de configuración e inicialice el archivo local de credenciales:
 
-- **La web no conecta al broker:** revisa la URL `ws://...:9001`, que el listener
-  WebSockets esté activo y que el firewall permita el puerto en la red privada.
-- **MQTT Test conecta, pero no aparecen datos del ESP32:** comprueba que el
-  firmware y la web usan el mismo tema, que `MQTT_HOST` apunta al PC correcto y
-  que el ESP32 logró conectarse al Wi-Fi.
-- **El simulador no arranca:** verifica que Mosquitto esté instalado en la ruta
-  indicada y que `mosquitto_pub.exe` exista allí.
-- **Error de compilación por TFT_eSPI o PubSubClient:** confirma la instalación
-  de PubSubClient y que TFT_eSPI esté dentro de `firmware/TableroVehicular/src/TFT_eSPI`
-  con `User_Setup.h` configurado.
+```powershell
+Copy-Item .\firmware\TableroVehicular\config.example.h .\firmware\TableroVehicular\config.h
+
+```
+
+Edite `firmware/TableroVehicular/config.h` e ingrese los parámetros de red:
+
+- `WIFI_SSID`: Identificador de la red Wi-Fi.
+- `WIFI_PASSWORD`: Clave de acceso Wi-Fi.
+- `MQTT_HOST`: Dirección IP estática o reservada del servidor/PC donde ejecuta Mosquitto (evite usar `localhost`).
+- `MQTT_PORT`: `1883`
+- `MQTT_TOPIC`: Debe coincidir estrictamente con el tópico suscrito por la interfaz web.
+
+### 5.3 Flasheo e Inspección
+
+1. Abra `firmware/TableroVehicular/TableroVehicular.ino` en Arduino IDE.
+2. Seleccione el puerto serie (COM) de la placa y ejecute la instrucción **Upload**.
+3. Inicie el **Serial Monitor** a `115200 baudios` para monitorear los registros (_logs_) de autenticación de red y estado del cliente MQTT.
+
+---
+
+## 6. Diagnóstico de Fallas (Troubleshooting)
+
+| Anomalía / Error                                                   | Causa Probable                            | Acción Correctiva                                                                                                                     |
+| ------------------------------------------------------------------ | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| **Fallo de conexión WebSocket en la App Web**                      | Listener inaccesible o puerto bloqueado.  | Verifique que `mosquitto.conf` contenga el listener `9001` activo. Acepte las reglas de tráfico entrante en el firewall de Windows.   |
+| **Cliente MQTT conecta, pero no renderiza datos del ESP32**        | Discrepancia de tópicos o IP errónea.     | Verifique la coincidencia exacta de `VITE_MQTT_TOPIC` y `MQTT_TOPIC`. Confirme que el ESP32 resolvió la dirección IP de `MQTT_HOST`.  |
+| **Fallo en la ejecución del script de simulación**                 | Falta del ejecutable `mosquitto_pub.exe`. | Valide la instalación de Mosquitto en la ruta estándar `C:\Program Files\mosquitto\`.                                                 |
+| **Error de inclusión o compilación (`TFT_eSPI` / `PubSubClient`)** | Estructura de librerías incorrecta.       | Asegúrese de situar la carpeta `TFT_eSPI` directamente en `firmware/TableroVehicular/src/TFT_eSPI` y restrinja la versión a `2.5.43`. |
