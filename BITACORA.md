@@ -153,7 +153,6 @@ Inconveniente
 
 - Tras aislar el driver y probar alimentar las señales de control, se determina que la falla radica en el módulo puente H L9110S.
 
-<<<<<<< HEAD
 ## 2026-10-19 - Iacobucci, Platz, Prieto
 
 Actividades realizadas
@@ -176,4 +175,3 @@ Inconvenientes
 Actividades realizadas
 
 - Separación de la telemetría periódica y el estado del dispositivo en tópicos MQTT independientes: vehiculo/m2/telemetria y vehiculo/m2/estado.
->>>>>>> origin

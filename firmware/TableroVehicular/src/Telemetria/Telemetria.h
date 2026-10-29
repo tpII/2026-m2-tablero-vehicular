@@ -10,4 +10,8 @@ struct Telemetry {
   float maxRpm;         // tope de la escala del tacometro
   float potenciometro;  // 0 - 100
   float bateria;        // voltios
+  float corrienteMotorA;
+  float tensionMotorV;
+  float potenciaMotorW;
+  bool medicionMotorValida;
 };

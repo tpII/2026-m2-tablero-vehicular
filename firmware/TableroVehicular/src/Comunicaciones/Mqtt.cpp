@@ -48,12 +48,25 @@ void mantieneWifi(unsigned long ahora) {
 }
 
 void publica(const Telemetry &lectura) {
-  char payload[192];
+  char payload[256];
+  char medicionMotor[112];
+  if (lectura.medicionMotorValida) {
+    snprintf(medicionMotor, sizeof(medicionMotor),
+             "\"corrienteMotor\":%.3f,\"tensionMotor\":%.3f,"
+             "\"potenciaMotor\":%.3f",
+             lectura.corrienteMotorA, lectura.tensionMotorV,
+             lectura.potenciaMotorW);
+  } else {
+    snprintf(medicionMotor, sizeof(medicionMotor),
+             "\"corrienteMotor\":null,\"tensionMotor\":null,"
+             "\"potenciaMotor\":null");
+  }
+
   snprintf(payload, sizeof(payload),
            "{\"velocidad\":%.1f,\"rpm\":%.0f,\"maxRpm\":%.0f,"
-           "\"potenciometro\":%.0f,\"bateria\":%.2f}",
+           "\"potenciometro\":%.0f,\"bateria\":%.2f,%s}",
            lectura.velocidad, lectura.rpm, lectura.maxRpm,
-           lectura.potenciometro, lectura.bateria);
+           lectura.potenciometro, lectura.bateria, medicionMotor);
 
   mqtt.publish(MQTT_TOPIC, payload, true);
 }

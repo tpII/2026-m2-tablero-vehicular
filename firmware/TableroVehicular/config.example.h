@@ -63,4 +63,3 @@
 #define PIN_TFT_CS   15
 #define PIN_TFT_DC    2
 #define PIN_TFT_RST   4
-#define PIN_TFT_BL   21

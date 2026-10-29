@@ -23,7 +23,16 @@ export const MQTT_STATUS_TOPIC =
   DEFAULT_STATUS_TOPIC;
 
 // Campos numericos que aceptamos del ESP32
-const FIELDS = ["velocidad", "rpm", "maxRpm", "potenciometro", "bateria"];
+const FIELDS = [
+  "velocidad",
+  "rpm",
+  "maxRpm",
+  "potenciometro",
+  "bateria",
+  "corrienteMotor",
+  "tensionMotor",
+  "potenciaMotor",
+];
 
 // Number(null), Number("") y Number(true) dan 0/1: solo aceptamos numeros
 // o cadenas numericas para no tomar un payload roto por un dato valido.

@@ -1,6 +1,7 @@
 #include "Sensores.h"
 
 #include "../../config.h"
+#include "../INA219/INA219.h"
 #include "../Motor/Motor.h"
 #include "../Potenciometro/Potenciometro.h"
 
@@ -17,6 +18,9 @@ float bateria = 12.6;
 
 unsigned long ultimaMuestra = 0;
 unsigned long proximoEscenario = 0;
+unsigned long proximoIntentoIna219 = 0;
+unsigned long ultimaImpresionIna219 = 0;
+bool ina219Listo = false;
 
 float limita(float valor, float min, float max) {
   if (valor < min) return min;
@@ -71,6 +75,26 @@ void tomaLectura(unsigned long ahora, Telemetry* lectura) {
   lectura->maxRpm = (float)MAX_RPM;
   lectura->potenciometro = potenciometro;
   lectura->bateria = bateria;
+
+  lectura->medicionMotorValida = false;
+  if (!ina219Listo && (int32_t)(ahora - proximoIntentoIna219) >= 0) {
+    ina219Listo = ina219Inicia();
+    proximoIntentoIna219 = ahora + 2000;
+  }
+
+  INA219Medicion medicion;
+  if (ina219Listo && ina219Lee(&medicion)) {
+    lectura->corrienteMotorA = medicion.corrienteA;
+    lectura->tensionMotorV = medicion.tensionCargaV;
+    lectura->potenciaMotorW = medicion.potenciaW;
+    lectura->medicionMotorValida = true;
+
+    if (ahora - ultimaImpresionIna219 >= 1000) {
+      ultimaImpresionIna219 = ahora;
+      Serial.printf("[ina219] consumo del motor: %.3f A\n",
+                    medicion.corrienteA);
+    }
+  }
 }
 
 void tareaSensores(void* parametro) {
@@ -80,8 +104,10 @@ void tareaSensores(void* parametro) {
   potenciometroInicia();
 #endif
   motorInicia();
+  ina219Listo = ina219Inicia();
+  proximoIntentoIna219 = millis() + 2000;
 
-  Telemetry lectura;
+  Telemetry lectura = {};
 
   for (;;) {
     unsigned long ahora = millis();
