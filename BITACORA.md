@@ -174,4 +174,5 @@ Inconvenientes
 
 Actividades realizadas
 
+- Implementación e integración del INA219 dentro de la tarea de sensores
 - Separación de la telemetría periódica y el estado del dispositivo en tópicos MQTT independientes: vehiculo/m2/telemetria y vehiculo/m2/estado.
