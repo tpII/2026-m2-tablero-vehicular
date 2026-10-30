@@ -13,6 +13,7 @@
 #define MQTT_HOST      "10.0.22.205"
 #define MQTT_PORT      1883
 #define MQTT_TOPIC     "vehiculo/m2/telemetria"
+#define MQTT_STATUS_TOPIC "vehiculo/m2/estado"
 #define MQTT_CLIENT_ID "tablero-vehicular"
 
 // ---------------------------------------------------------------- Cadencia
@@ -50,6 +51,10 @@
 // 0 = el acelerador sale de la simulacion, 1 = se lee el ADC real.
 #define USAR_POTENCIOMETRO_REAL 0
 
+// ---------------------------------------------------------------- Motor
+// Control por puente H L298N: ENA con jumper a +5V, IN2 fijo a GND y PWM en IN1.
+#define PIN_MOTOR_IN1 25
+
 // ---------------------------------------------------------------- Pantalla
 // Pines del ST7789. Se=configuran en el bloque 3, junto con User_Setup.h
 // de TFT_eSPI. Ajusta CS si tuDisplay lo tiene conectado.
@@ -58,4 +63,3 @@
 #define PIN_TFT_CS   15
 #define PIN_TFT_DC    2
 #define PIN_TFT_RST   4
-#define PIN_TFT_BL   21

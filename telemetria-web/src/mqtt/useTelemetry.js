@@ -35,7 +35,13 @@ function nextMock(prev) {
 // Une los datos reales del ESP32 con el simulador de respaldo: el panel nunca
 // se queda sin valores, y si el ESP32 se desconecta seguimos viendo algo.
 export default function useTelemetry() {
-  const { status, data: mqttData, lastSeen, lastMessage } = useMqtt();
+  const {
+    status,
+    deviceStatus,
+    data: mqttData,
+    lastSeen,
+    lastMessage,
+  } = useMqtt();
   const [mock, setMock] = useState(MOCK_DATA);
   const [now, setNow] = useState(() => Date.now());
 
@@ -74,6 +80,7 @@ export default function useTelemetry() {
     data,
     source: live ? "esp32" : "mock",
     status: live ? "conectado" : connected ? "sin-datos" : status,
+    deviceStatus,
     lastSeen,
     // Se pasa sin transformar: la consola de pruebas necesita el payload crudo
     // y el veredicto del parser, no solo los datos ya validados.

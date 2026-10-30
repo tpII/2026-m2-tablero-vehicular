@@ -2,6 +2,7 @@ param(
     [string]$Host_      = "10.0.22.205",
     [int]$Port          = 1883,
     [string]$Topic      = "vehiculo/m2/telemetria",
+    [string]$StatusTopic = "vehiculo/m2/estado",
     [int]$Segundos      = 0,
     [int]$MaxRpm        = 8000
 )
@@ -32,7 +33,14 @@ function CalculaRpm($kmh, $maxRpm) {
     return [Math]::Round($ralenti + $dentro * ($maxRpm - $ralenti))
 }
 
-Write-Host "Simulando ESP32 -> $Host_`:$Port  topic=$Topic" -ForegroundColor Cyan
+function PublicaEstado($estado) {
+    & $pub -h $Host_ -p $Port -t $StatusTopic -q 1 -r -m $estado
+    if ($LASTEXITCODE -ne 0) {
+        throw "No se pudo publicar el estado '$estado' en $StatusTopic (exit code $LASTEXITCODE)"
+    }
+}
+
+Write-Host "Simulando ESP32 -> $Host_`:$Port  telemetria=$Topic  estado=$StatusTopic" -ForegroundColor Cyan
 Write-Host "Ctrl+C para detener." -ForegroundColor DarkGray
 Write-Host ""
 
@@ -43,33 +51,47 @@ $bateria = 12.6
 $proximoCambio = 0
 $fin = if ($Segundos -gt 0) { (Get-Date).AddSeconds($Segundos) } else { [DateTime]::MaxValue }
 $iteracion = 0
+$estadoPublicado = $false
 
-while ((Get-Date) -lt $fin) {
-    $iteracion++
+try {
+    PublicaEstado "online"
+    $estadoPublicado = $true
 
-    if ($iteracion -ge $proximoCambio) {
-        $proximoCambio = $iteracion + 4 + (Get-Random -Maximum 6)
-        $objetivo = Get-Random -Maximum 131
+    while ((Get-Date) -lt $fin) {
+        $iteracion++
+
+        if ($iteracion -ge $proximoCambio) {
+            $proximoCambio = $iteracion + 4 + (Get-Random -Maximum 6)
+            $objetivo = Get-Random -Maximum 131
+        }
+
+        $velocidad = Acerca $velocidad $objetivo 0.06
+        $demanda = Limita (($objetivo - $velocidad) * 7.0) 0.0 100.0
+        if ($objetivo -lt $velocidad) { $demanda = 0 }
+        $potenciometro = Acerca $potenciometro $demanda 0.12
+
+        $rpm = CalculaRpm $velocidad $maxRpm
+        if ($rpm -gt 3000) { $bateria = Limita ($bateria + 0.004) 11.8 14.4 }
+        else { $bateria = Limita ($bateria - 0.00008) 11.8 14.4 }
+
+        $payload = '{{"velocidad":{0},"rpm":{1},"maxRpm":{2},"potenciometro":{3},"bateria":{4}}}' -f `
+            $velocidad.ToString("F1", $inv), $rpm.ToString("F0", $inv),
+            $maxRpm.ToString("F0", $inv), $potenciometro.ToString("F0", $inv),
+            $bateria.ToString("F2", $inv)
+
+        & $pub -h $Host_ -p $Port -t $Topic -q 1 -r -m $payload | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            throw "No se pudo publicar telemetria en $Topic (exit code $LASTEXITCODE)"
+        }
+
+        Write-Host ("{0,5}s  vel {1,6:F1} km/h  rpm {2,5}  pot {3,3:F0}%  bat {4:F2} V" -f `
+            $iteracion, $velocidad, $rpm, $potenciometro, $bateria) -ForegroundColor DarkGray
+
+        Start-Sleep -Seconds 1
     }
-
-    $velocidad = Acerca $velocidad $objetivo 0.06
-    $demanda = Limita (($objetivo - $velocidad) * 7.0) 0.0 100.0
-    if ($objetivo -lt $velocidad) { $demanda = 0 }
-    $potenciometro = Acerca $potenciometro $demanda 0.12
-
-    $rpm = CalculaRpm $velocidad $maxRpm
-    if ($rpm -gt 3000) { $bateria = Limita ($bateria + 0.004) 11.8 14.4 }
-    else { $bateria = Limita ($bateria - 0.00008) 11.8 14.4 }
-
-    $payload = '{{"velocidad":{0},"rpm":{1},"maxRpm":{2},"potenciometro":{3},"bateria":{4}}}' -f `
-        $velocidad.ToString("F1", $inv), $rpm.ToString("F0", $inv),
-        $maxRpm.ToString("F0", $inv), $potenciometro.ToString("F0", $inv),
-        $bateria.ToString("F2", $inv)
-
-    & $pub -h $Host_ -p $Port -t $Topic -q 1 -r -m $payload | Out-Null
-
-    Write-Host ("{0,5}s  vel {1,6:F1} km/h  rpm {2,5}  pot {3,3:F0}%  bat {4:F2} V" -f `
-        $iteracion, $velocidad, $rpm, $potenciometro, $bateria) -ForegroundColor DarkGray
-
-    Start-Sleep -Seconds 1
+}
+finally {
+    if ($estadoPublicado) {
+        PublicaEstado "offline"
+    }
 }

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -16,35 +16,44 @@ import {
 import { TimeSeries, SmoothieChart } from "smoothie";
 import useTelemetry from "../mqtt/useTelemetry";
 
-// TODO: el ESP32 todavia no manda corriente ni tension de fuente, asi que
-// estos datos siguen simulados (grafico "Estres de Energia" y tarjetas
-// "Pico Consumo" / "Fuente").
-const mockEnergyData = [
-  { time: "10:00:00", consumo: 0.5 },
-  { time: "10:00:01", consumo: 1.2 },
-  { time: "10:00:02", consumo: 3.5 },
-  { time: "10:00:03", consumo: 5.8 },
-  { time: "10:00:04", consumo: 6.2 },
-  { time: "10:00:05", consumo: 6.5 },
-  { time: "10:00:06", consumo: 3.0 },
-  { time: "10:00:07", consumo: 1.0 },
-  { time: "10:00:08", consumo: 0.5 },
-];
-
-const mockPower = {
-  consumoPico: 6.5,
-  voltajeFuente: 12.1,
-};
-
 export default function Telemetry() {
-  const { data, source, status, lastSeen } = useTelemetry();
+  const { data, source, status, deviceStatus, lastSeen } = useTelemetry();
   const live = source === "esp32";
+  const [energyData, setEnergyData] = useState([]);
+  const wasLive = useRef(false);
+  const lastEnergySample = useRef(null);
 
   // Referencias para SmoothieCharts
   const canvasRef = useRef(null);
   const chartRef = useRef(null);
   const seriesAcelerador = useRef(new TimeSeries());
   const seriesRpm = useRef(new TimeSeries());
+
+  useEffect(() => {
+    if (!live) {
+      wasLive.current = false;
+      lastEnergySample.current = null;
+      return;
+    }
+
+    if (
+      !Number.isFinite(data.corrienteMotor) ||
+      lastSeen === lastEnergySample.current
+    ) {
+      return;
+    }
+
+    const startNewSeries = !wasLive.current;
+    wasLive.current = true;
+    lastEnergySample.current = lastSeen;
+    setEnergyData((previous) => [
+      ...(startNewSeries ? [] : previous).slice(-59),
+      {
+        time: new Date(lastSeen).toLocaleTimeString(),
+        corriente: data.corrienteMotor,
+      },
+    ]);
+  }, [lastSeen, live, data.corrienteMotor]);
 
   // Inicialización de SmoothieCharts
   useEffect(() => {
@@ -113,6 +122,17 @@ export default function Telemetry() {
 
   const rpm = Math.round(data.rpm);
   const potenciometro = Math.round(data.potenciometro);
+  const corrienteMotor = Number.isFinite(data.corrienteMotor)
+    ? data.corrienteMotor.toFixed(3)
+    : "--";
+  const tensionMotor = Number.isFinite(data.tensionMotor)
+    ? data.tensionMotor.toFixed(3)
+    : "--";
+  const potenciaMotor = Number.isFinite(data.potenciaMotor)
+    ? data.potenciaMotor.toFixed(3)
+    : "--";
+  const energyChartData =
+    live && Number.isFinite(data.corrienteMotor) ? energyData : [];
 
   const rpmColor = data.rpm > data.maxRpm * 0.75 ? "#ef4444" : "#10b981";
   const gaugeData = [
@@ -138,7 +158,7 @@ export default function Telemetry() {
             color: live ? "#10b981" : "#f59e0b",
           }}
         >
-          {live ? "ESP32" : "SIN DATOS"} · {status}
+          {live ? "TELEMETRÍA EN VIVO" : "SIN DATOS"} · Broker: {status} · ESP32: {deviceStatus}
         </span>
       </div>
 
@@ -210,48 +230,70 @@ export default function Telemetry() {
           </div>
 
           <div className="dashboard-card" style={{ height: "250px" }}>
-            <h4 className="card-title">Estrés de Energía (simulado)</h4>
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart
-                data={mockEnergyData}
-                margin={{ top: 10, right: 0, left: -20, bottom: 0 }}
-              >
-                <defs>
-                  <linearGradient id="colorConsumo" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#ff5722" stopOpacity={0.5} />
-                    <stop offset="95%" stopColor="#ff5722" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  vertical={false}
-                  stroke="#1f2937"
-                />
-                <XAxis dataKey="time" stroke="#6b7280" hide />
-                <YAxis
-                  stroke="#6b7280"
-                  tick={{ fontSize: 12 }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#1f2937",
-                    borderRadius: "8px",
-                    border: "1px solid #374151",
-                    boxShadow: "0 4px 6px rgba(0,0,0,0.3)",
+            <h4 className="card-title">Consumo del motor (INA219)</h4>
+            <div style={{ height: "calc(100% - 30px)", position: "relative" }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart
+                  data={energyChartData}
+                  margin={{ top: 10, right: 0, left: -20, bottom: 0 }}
+                >
+                  <defs>
+                    <linearGradient
+                      id="colorConsumoMotor"
+                      x1="0"
+                      y1="0"
+                      x2="0"
+                      y2="1"
+                    >
+                      <stop offset="5%" stopColor="#ff5722" stopOpacity={0.5} />
+                      <stop offset="95%" stopColor="#ff5722" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    vertical={false}
+                    stroke="#1f2937"
+                  />
+                  <XAxis dataKey="time" stroke="#6b7280" hide />
+                  <YAxis
+                    stroke="#6b7280"
+                    tick={{ fontSize: 12 }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#1f2937",
+                      borderRadius: "8px",
+                      border: "1px solid #374151",
+                      boxShadow: "0 4px 6px rgba(0,0,0,0.3)",
+                    }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="corriente"
+                    name="Corriente (A)"
+                    stroke="#ff5722"
+                    strokeWidth={3}
+                    fill="url(#colorConsumoMotor)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+              {energyChartData.length === 0 && (
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    display: "grid",
+                    placeItems: "center",
+                    color: "#9ca3af",
+                    pointerEvents: "none",
                   }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="consumo"
-                  name="Corriente (A)"
-                  stroke="#ff5722"
-                  strokeWidth={3}
-                  fill="url(#colorConsumo)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+                >
+                  Esperando lectura del INA219
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -340,12 +382,12 @@ export default function Telemetry() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "1fr 1fr",
+              gridTemplateColumns: "1fr",
               gap: "1rem",
             }}
           >
             <div className="dashboard-card">
-              <div className="card-title">Pico Consumo</div>
+              <div className="card-title">Corriente del motor</div>
               <div
                 style={{
                   fontSize: "1.8rem",
@@ -353,22 +395,36 @@ export default function Telemetry() {
                   color: "#f3f4f6",
                 }}
               >
-                {mockPower.consumoPico}{" "}
+                {corrienteMotor}{" "}
                 <span style={{ fontSize: "1rem", color: "#9ca3af" }}>A</span>
               </div>
             </div>
 
             <div className="dashboard-card">
-              <div className="card-title">Fuente (VCC)</div>
+              <div className="card-title">Tensión del motor</div>
               <div
                 style={{
                   fontSize: "1.8rem",
                   fontWeight: "800",
-                  color: mockPower.voltajeFuente < 11.5 ? "#ef4444" : "#f3f4f6",
+                  color: "#f3f4f6",
                 }}
               >
-                {mockPower.voltajeFuente}{" "}
+                {tensionMotor}{" "}
                 <span style={{ fontSize: "1rem", color: "#9ca3af" }}>V</span>
+              </div>
+            </div>
+
+            <div className="dashboard-card">
+              <div className="card-title">Potencia del motor</div>
+              <div
+                style={{
+                  fontSize: "1.8rem",
+                  fontWeight: "800",
+                  color: "#f3f4f6",
+                }}
+              >
+                {potenciaMotor}{" "}
+                <span style={{ fontSize: "1rem", color: "#9ca3af" }}>W</span>
               </div>
             </div>
           </div>

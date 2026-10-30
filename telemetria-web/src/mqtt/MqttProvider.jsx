@@ -1,12 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
 import mqtt from "mqtt";
 import { MqttContext } from "./useMqtt";
-import { MQTT_TOPIC, MQTT_URL, parseTelemetry } from "./mqttConfig";
+import {
+  MQTT_STATUS_TOPIC,
+  MQTT_TOPIC,
+  MQTT_URL,
+  parseTelemetry,
+} from "./mqttConfig";
 
 // Una sola conexion para toda la app: reconecta sola y mantiene el ultimo
 // estado, asi las paginas no abren un socket cada una.
 export default function MqttProvider({ children }) {
   const [status, setStatus] = useState("conectando");
+  const [deviceStatus, setDeviceStatus] = useState("desconocido");
   const [data, setData] = useState(null);
   const [lastSeen, setLastSeen] = useState(0);
 
@@ -31,6 +37,7 @@ export default function MqttProvider({ children }) {
     client.on("connect", () => {
       setStatus("conectado");
       client.subscribe(MQTT_TOPIC, { qos: 0 });
+      client.subscribe(MQTT_STATUS_TOPIC, { qos: 0 });
     });
 
     client.on("reconnect", () => setStatus("reconectando"));
@@ -40,7 +47,14 @@ export default function MqttProvider({ children }) {
 
     client.on("message", (topic, message) => {
       const payload = message.toString();
-      const parsed = parseTelemetry(payload);
+      const parsed = topic === MQTT_TOPIC ? parseTelemetry(payload) : null;
+
+      if (
+        topic === MQTT_STATUS_TOPIC &&
+        (payload === "online" || payload === "offline")
+      ) {
+        setDeviceStatus(payload);
+      }
 
       // Solo lo que parsea avanza los datos del panel; el LWT retained
       // ("online"/"offline") y el JSON corrupto no los tocan.
@@ -52,8 +66,12 @@ export default function MqttProvider({ children }) {
       // Pero todos los mensajes se cuentan, validos o no.
       setLastMessage((prev) => ({
         seq: prev.seq + 1,
+        topic,
         payload,
-        ok: parsed !== null,
+        ok:
+          parsed !== null ||
+          (topic === MQTT_STATUS_TOPIC &&
+            (payload === "online" || payload === "offline")),
         at: Date.now(),
       }));
     });
@@ -62,8 +80,17 @@ export default function MqttProvider({ children }) {
   }, []);
 
   const value = useMemo(
-    () => ({ url: MQTT_URL, topic: MQTT_TOPIC, status, data, lastSeen, lastMessage }),
-    [status, data, lastSeen, lastMessage],
+    () => ({
+      url: MQTT_URL,
+      topic: MQTT_TOPIC,
+      statusTopic: MQTT_STATUS_TOPIC,
+      status,
+      deviceStatus,
+      data,
+      lastSeen,
+      lastMessage,
+    }),
+    [status, deviceStatus, data, lastSeen, lastMessage],
   );
 
   return <MqttContext.Provider value={value}>{children}</MqttContext.Provider>;
