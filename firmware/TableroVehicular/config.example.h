@@ -26,6 +26,7 @@
 // que ninguna tarea se bloquee a la otra.
 #define NUCLEO_MQTT     0
 #define NUCLEO_SENSORES 1
+#define NUCLEO_PANTALLA 1
 
 // MQTT por encima de sensores: publicar no espera a nadie, muestrear si.
 #define PRIORIDAD_MQTT     2
