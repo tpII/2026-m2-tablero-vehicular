@@ -3,7 +3,7 @@
 TFT_eSPI-2.5.43/
 
 # Credenciales WiFi/MQTT locales
-firmware/*/config.h
+firmware/TableroVehicular/config.h
 
 .agents
 firmware/TableroVehicular/src/TFT_eSPI/
