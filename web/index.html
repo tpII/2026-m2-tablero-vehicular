@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tablero Vehicular - Prueba MQTT</title>
+  <style>
+    :root {
+      color-scheme: dark
+    }
+
+    table,
+    th,
+    td {
+      border: 1px solid
+    }
+
+    #messages tr:nth-child(n + 6) {
+      display: none
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Tablero Vehicular - Prueba MQTT</h1>
+  <p>Broker <code id="broker"></code>: <strong id="state">conectando</strong></p>
+
+  <h2>Mensajes de prueba</h2>
+  <p>Lo que publica el ESP32 en <code>vehicle/m2/test</code>, el más reciente arriba.</p>
+  <table cellpadding="4">
+    <thead>
+      <tr>
+        <th>Hora</th>
+        <th>Tópico</th>
+        <th>Mensaje</th>
+      </tr>
+    </thead>
+    <tbody id="messages"></tbody>
+  </table>
+
+  <h2>Telemetría</h2>
+  <p>Lo que publica el ESP32 en <code>vehicle/m2/telemetry</code>, cada valor reemplaza al anterior.</p>
+  <table cellpadding="4">
+    <thead>
+      <tr>
+        <th>Campo</th>
+        <th>Valor</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Velocidad</td>
+        <td id="speed">-</td>
+      </tr>
+      <tr>
+        <td>RPM</td>
+        <td id="rpm">-</td>
+      </tr>
+      <tr>
+        <td>RPM máximas</td>
+        <td id="maxRpm">-</td>
+      </tr>
+      <tr>
+        <td>Potenciómetro</td>
+        <td id="potentiometer">-</td>
+      </tr>
+      <tr>
+        <td>PWM del motor</td>
+        <td id="motorPwm">-</td>
+      </tr>
+      <tr>
+        <td>Batería</td>
+        <td id="battery">-</td>
+      </tr>
+      <tr>
+        <td>Corriente del motor</td>
+        <td id="motorCurrent">-</td>
+      </tr>
+      <tr>
+        <td>Tensión del motor</td>
+        <td id="motorVoltage">-</td>
+      </tr>
+      <tr>
+        <td>Potencia del motor</td>
+        <td id="motorPower">-</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <script src="https://unpkg.com/mqtt@5.15.2/dist/mqtt.min.js"></script>
+  <script src="app.js"></script>
+</body>
+
+</html>
