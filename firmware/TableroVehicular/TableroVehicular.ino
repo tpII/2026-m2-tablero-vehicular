@@ -7,6 +7,18 @@
 #include "src/Wifi.cpp"
 #include "src/Mqtt.cpp"
 #include "src/Hall.cpp"
+#include "src/Task.cpp"
+
+#include "config.h"
+
+static float ReadPotentiometer() {
+  return EncoderPercent(ReadEncoderRaw());
+}
+
+static float DriveMotor(float percent) {
+  WriteMotorPercent(percent);
+  return MotorPercent();
+}
 
 void setup() {
   Serial.begin(115200);
@@ -25,24 +37,28 @@ void setup() {
 //  ClearDisplay();
 //  PrintDisplay();
 //
-//  InitializeWifi();
-//  InitializeMqtt();
+  InitializeWifi();
+  InitializeMqtt();
+
+  InitializeTask(ReadPotentiometer, DriveMotor);
 }
 
 void loop() {
-  float percent = EncoderPercent(ReadEncoderRaw());
-  ShowDisplayPercent(percent);
-  WriteMotorPercent(percent);
+  KeepMqttAlive();
 
-  PrintEncoder();
-  PrintMotor();
-  PrintIna219();
+  TaskReading reading;
+  if (!ReceiveTask(&reading)) return;
+
+  ShowDisplayPercent(reading.potentiometer);
+
+  unsigned long periodUs = ReadHallPeriodUs();
+  char payload[128];
+  snprintf(payload, sizeof(payload), "{\"potentiometer\":%.1f,\"motorPwm\":%.1f,\"rpm\":%.1f,\"speed\":%.2f,\"current\":%.1f,\"power\":%.1f}", reading.potentiometer, reading.motor, HallRpm(periodUs), HallTangentialSpeed(periodUs) * 3.6f, reading.current, reading.power);
+  PublishMqtt(MQTT_TOPIC, payload);
+
+  PrintTask();
   PrintHall();
-//  KeepMqttAlive();
 //  PrintWifi();
 //  PrintMqtt();
 //  PublishMqtt("vehicle/m2/test", "hello from the dashboard");
-//  delay(1000);
-
-  delay(200);
 }

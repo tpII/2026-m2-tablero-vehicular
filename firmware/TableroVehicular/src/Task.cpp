@@ -7,6 +7,8 @@ constexpr uint32_t TASK_STACK_SIZE = 4096;
 struct TaskReading {
   float potentiometer;
   float motor;
+  float current;
+  float power;
 };
 
 static QueueHandle_t taskQueue;
@@ -20,6 +22,8 @@ static void RunTask(void *) {
   for (;;) {
     reading.potentiometer = taskRead();
     reading.motor = taskWrite(reading.potentiometer);
+    reading.current = ReadIna219Milliamps();
+    reading.power = ReadIna219Milliwatts();
     xQueueOverwrite(taskQueue, &reading);
     vTaskDelay(pdMS_TO_TICKS(TASK_PERIOD_MS));
   }
