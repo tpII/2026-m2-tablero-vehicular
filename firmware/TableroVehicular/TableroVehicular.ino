@@ -40,7 +40,7 @@ void setup() {
   InitializeWifi();
   InitializeMqtt();
 
-  InitializeTask(ReadPotentiometer, DriveMotor);
+  InitializeTask(ReadPotentiometer, DriveMotor, ReadIna219Milliamps, ReadIna219Milliwatts);
 }
 
 void loop() {

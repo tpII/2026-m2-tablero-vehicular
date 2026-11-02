@@ -15,6 +15,8 @@ static QueueHandle_t taskQueue;
 static TaskHandle_t taskHandle;
 static float (*taskRead)();
 static float (*taskWrite)(float);
+static float (*taskCurrent)();
+static float (*taskPower)();
 static TaskReading taskLast;
 
 static void RunTask(void *) {
@@ -22,16 +24,18 @@ static void RunTask(void *) {
   for (;;) {
     reading.potentiometer = taskRead();
     reading.motor = taskWrite(reading.potentiometer);
-    reading.current = ReadIna219Milliamps();
-    reading.power = ReadIna219Milliwatts();
+    reading.current = taskCurrent();
+    reading.power = taskPower();
     xQueueOverwrite(taskQueue, &reading);
     vTaskDelay(pdMS_TO_TICKS(TASK_PERIOD_MS));
   }
 }
 
-static void InitializeTask(float (*read)(), float (*write)(float)) {
+static void InitializeTask(float (*read)(), float (*write)(float), float (*current)(), float (*power)()) {
   taskRead = read;
   taskWrite = write;
+  taskCurrent = current;
+  taskPower = power;
   taskQueue = xQueueCreate(1, sizeof(TaskReading));
   xTaskCreatePinnedToCore(RunTask, "potentiometer", TASK_STACK_SIZE, nullptr, TASK_PRIORITY, &taskHandle, TASK_CORE);
 }
