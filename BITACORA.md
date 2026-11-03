@@ -176,3 +176,30 @@ Actividades realizadas
 
 - Implementación e integración del INA219 dentro de la tarea de sensores
 - Separación de la telemetría periódica y el estado del dispositivo en tópicos MQTT independientes: vehiculo/m2/telemetria y vehiculo/m2/estado.
+
+## 2026-10-30 - Platz
+
+Actividad realizadas
+
+- Integración del sensor de efecto Hall A3144
+
+Inconveniente
+
+- Al momento de la integración del sensor de efecto Hall A3144, el proyecto dejó de funcionar correctamente: potenciómetro no variaba y el motor giraba a pesar de que no recibía un valor.
+
+## 2026-11-01 - Iacobucci, Platz, Prieto
+
+Actividades realizadas
+
+- Refactorización del código, solucionando los inconvenientes generados en la anterior entrada de la bitácora.
+- Integrado A3144 detectando un imán unido a la rueda y calculando la velocidad tangencial del motor.
+
+Inconveniente
+
+- Al momento de la refactorización la comunicación MQTT no pudo quedar implementada.
+
+## 2026-11-01 - Iacobucci, Platz, Prieto
+
+Actividades realizadas
+
+- Reimplementación de la comunicación MQTT dentro del proyecto junto al setup de FreeRTOS
