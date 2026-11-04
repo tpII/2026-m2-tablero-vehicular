@@ -41,8 +41,10 @@ const THR_ZONES = [
 export default function Home() {
   const { data, source, status, deviceStatus } = useTelemetry();
 
-  const batPercent = ((data.bateria - BAT_MIN) / (BAT_MAX - BAT_MIN)) * 100;
-  const batLow = data.bateria < BAT_LOW;
+  const bateria = Number.isFinite(data.bateria) ? data.bateria : null;
+  const batPercent =
+    bateria === null ? 0 : ((bateria - BAT_MIN) / (BAT_MAX - BAT_MIN)) * 100;
+  const batLow = bateria !== null && bateria < BAT_LOW;
   const live = source === "esp32";
 
   return (
@@ -69,11 +71,11 @@ export default function Home() {
 
             <TftPanel
               title="BAT"
-              value={data.bateria.toFixed(1)}
+              value={bateria === null ? "--" : bateria.toFixed(1)}
               unit="V"
-              footer={batLow ? "LOW" : "OK"}
+              footer={bateria === null ? "N/A" : batLow ? "LOW" : "OK"}
               percent={batPercent}
-              zones={BAT_ZONES}
+              zones={bateria === null ? [] : BAT_ZONES}
             />
 
             <MeterGauge
@@ -105,7 +107,7 @@ export default function Home() {
         </span>
         <span>
           Broker: {status} · ESP32: {deviceStatus} · {live ? "MQTT" : "datos simulados"} · {data.velocidad} km/h · {data.rpm}{" "}
-          rpm · thr {data.potenciometro}% · {data.bateria} v
+          rpm · thr {data.potenciometro}% · {bateria === null ? "--" : `${bateria} V`}
         </span>
       </footer>
     </div>

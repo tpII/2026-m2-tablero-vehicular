@@ -6,3 +6,5 @@ TFT_eSPI-2.5.43/
 
 .agents
 firmware/TableroVehicular/src/TFT_eSPI/
+mqtt.logger
+mqtt-logger/

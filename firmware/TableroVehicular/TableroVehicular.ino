@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <math.h>
 
 #include "src/Encoder.cpp"
 #include "src/Display.cpp"
@@ -10,6 +11,15 @@
 #include "src/Task.cpp"
 
 #include "config.h"
+
+static void FormatJsonFloat(float value, char *buffer, size_t bufferSize, const char *format) {
+  if (!isfinite(value)) {
+    snprintf(buffer, bufferSize, "null");
+    return;
+  }
+
+  snprintf(buffer, bufferSize, format, static_cast<double>(value));
+}
 
 static float ReadPotentiometer() {
   return EncoderPercent(ReadEncoderRaw());
@@ -44,17 +54,28 @@ void setup() {
 }
 
 void loop() {
-  KeepMqttAlive();
-
   TaskReading reading;
   if (!ReceiveTask(&reading)) return;
 
   ShowDisplayPercent(reading.potentiometer);
 
   unsigned long periodUs = ReadHallPeriodUs();
-  char payload[128];
-  snprintf(payload, sizeof(payload), "{\"potentiometer\":%.1f,\"motorPwm\":%.1f,\"rpm\":%.1f,\"speed\":%.2f,\"current\":%.1f,\"power\":%.1f}", reading.potentiometer, reading.motor, HallRpm(periodUs), HallTangentialSpeed(periodUs) * 3.6f, reading.current, reading.power);
-  PublishMqtt(MQTT_TOPIC, payload);
+  char potentiometer[48];
+  char motorPwm[48];
+  char rpm[48];
+  char speed[48];
+  char current[48];
+  char power[48];
+  FormatJsonFloat(reading.potentiometer, potentiometer, sizeof(potentiometer), "%.1f");
+  FormatJsonFloat(reading.motor, motorPwm, sizeof(motorPwm), "%.1f");
+  FormatJsonFloat(HallRpm(periodUs), rpm, sizeof(rpm), "%.1f");
+  FormatJsonFloat(HallTangentialSpeed(periodUs) * 3.6f, speed, sizeof(speed), "%.2f");
+  FormatJsonFloat(reading.current, current, sizeof(current), "%.1f");
+  FormatJsonFloat(reading.power, power, sizeof(power), "%.1f");
+
+  static TelemetryPayload payload;
+  snprintf(payload.json, sizeof(payload.json), "{\"potentiometer\":%s,\"motorPwm\":%s,\"rpm\":%s,\"speed\":%s,\"current\":%s,\"power\":%s}", potentiometer, motorPwm, rpm, speed, current, power);
+  SendTelemetry(&payload);
 
   PrintTask();
   PrintHall();

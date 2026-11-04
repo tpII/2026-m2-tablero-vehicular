@@ -19,9 +19,29 @@ client.on("close", () => {
 
 client.on("message", (topic, message) => {
   if (topic === TELEMETRY_TOPIC) {
-    for (const [key, value] of Object.entries(JSON.parse(message.toString()))) {
+    let telemetry;
+    try {
+      const payload = message.toString();
+      telemetry = JSON.parse(
+        payload.replace(/:\s*[-+]?(?:inf(?:inity)?|nan)(?=\s*[,}])/gi, ":null"),
+      );
+    } catch (error) {
+      console.warn("Telemetría MQTT inválida:", message.toString(), error);
+      return;
+    }
+
+    if (
+      !telemetry ||
+      typeof telemetry !== "object" ||
+      Array.isArray(telemetry)
+    ) {
+      console.warn("La telemetría MQTT no es un objeto:", message.toString());
+      return;
+    }
+
+    for (const [key, value] of Object.entries(telemetry)) {
       const cell = document.getElementById(key);
-      if (cell) cell.textContent = value;
+      if (cell) cell.textContent = value ?? "-";
     }
     return;
   }

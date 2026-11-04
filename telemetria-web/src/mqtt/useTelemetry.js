@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMqtt } from "./useMqtt";
 
-// Datos crudos: los valores que manda el ESP32 en vehiculo/m2/telemetria
+// Valores de respaldo para campos que el firmware todavía no publica.
 export const MOCK_DATA = {
   velocidad: 45,
   rpm: 3200,
@@ -71,10 +71,16 @@ export default function useTelemetry() {
   // Fusionar dentro de useMemo mantiene la misma referencia mientras no cambien
   // las entradas. Armar el objeto en linea devolvia una referencia nueva en cada
   // render, y eso hacia disparar en bucle los efectos que dependen de `data`.
-  const data = useMemo(
-    () => (live ? { ...mock, ...mqttData } : mock),
-    [live, mock, mqttData],
-  );
+  const data = useMemo(() => {
+    if (!live) return mock;
+
+    return {
+      ...mock,
+      ...mqttData,
+      bateria: mqttData.bateria ?? null,
+      tensionMotor: mqttData.tensionMotor ?? null,
+    };
+  }, [live, mock, mqttData]);
 
   return {
     data,
