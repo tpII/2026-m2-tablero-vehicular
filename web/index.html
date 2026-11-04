@@ -4,89 +4,111 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Tablero Vehicular - Prueba MQTT</title>
+  <title>Tablero Vehicular - Telemetría MQTT</title>
   <style>
     :root {
       color-scheme: dark
     }
 
-    table,
-    th,
-    td {
-      border: 1px solid
+    body {
+      max-width: 640px;
+      margin: 2rem auto;
+      padding: 0 1rem
     }
 
-    #messages tr:nth-child(n + 6) {
-      display: none
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed
+    }
+
+    th,
+    td {
+      padding: 6px 8px;
+      text-align: left;
+      border: 2px solid #333
+    }
+
+    th:nth-child(2),
+    td:nth-child(2) {
+      text-align: right;
+      font-variant-numeric: tabular-nums
+    }
+
+    .state {
+      color: #999
+    }
+
+    .on {
+      color: #4c4
+    }
+
+    .off {
+      color: #e55
+    }
+
+    #log {
+      height: 240px;
+      overflow-y: auto;
+      padding: 8px;
+      border: 1px solid #333;
+      border-radius: 4px
     }
   </style>
 </head>
 
 <body>
-  <h1>Tablero Vehicular - Prueba MQTT</h1>
-  <p>Broker <code id="broker"></code>: <strong id="state">conectando</strong></p>
-
-  <h2>Mensajes de prueba</h2>
-  <p>Lo que publica el ESP32 en <code>vehicle/m2/test</code>, el más reciente arriba.</p>
-  <table cellpadding="4">
-    <thead>
-      <tr>
-        <th>Hora</th>
-        <th>Tópico</th>
-        <th>Mensaje</th>
-      </tr>
-    </thead>
-    <tbody id="messages"></tbody>
-  </table>
+  <h1>Tablero Vehicular</h1>
+  <p>Broker <code id="broker"></code>: <strong class="state" id="brokerState">conectando</strong></p>
+  <p>ESP32: <strong class="state" id="deviceState">sin datos</strong></p>
 
   <h2>Telemetría</h2>
-  <p>Lo que publica el ESP32 en <code>vehicle/m2/telemetry</code>, cada valor reemplaza al anterior.</p>
-  <table cellpadding="4">
+  <p>Últimos valores publicados por el ESP32 en <code>vehicle/m2/telemetry</code>.</p>
+  <table>
     <thead>
       <tr>
-        <th>Campo</th>
+        <th>Variable</th>
         <th>Valor</th>
+        <th>Unidad</th>
       </tr>
     </thead>
     <tbody>
       <tr>
         <td>Velocidad</td>
-        <td id="speed">-</td>
+        <td id="speed" data-decimals="2">-</td>
+        <td>km/h</td>
       </tr>
       <tr>
         <td>RPM</td>
-        <td id="rpm">-</td>
-      </tr>
-      <tr>
-        <td>RPM máximas</td>
-        <td id="maxRpm">-</td>
+        <td id="rpm" data-decimals="1">-</td>
+        <td>rpm</td>
       </tr>
       <tr>
         <td>Potenciómetro</td>
-        <td id="potentiometer">-</td>
+        <td id="potentiometer" data-decimals="1">-</td>
+        <td>%</td>
       </tr>
       <tr>
         <td>PWM del motor</td>
-        <td id="motorPwm">-</td>
-      </tr>
-      <tr>
-        <td>Batería</td>
-        <td id="battery">-</td>
+        <td id="motorPwm" data-decimals="1">-</td>
+        <td>%</td>
       </tr>
       <tr>
         <td>Corriente del motor</td>
-        <td id="current">-</td>
-      </tr>
-      <tr>
-        <td>Tensión del motor</td>
-        <td id="motorVoltage">-</td>
+        <td id="current" data-decimals="1">-</td>
+        <td>mA</td>
       </tr>
       <tr>
         <td>Potencia del motor</td>
-        <td id="power">-</td>
+        <td id="power" data-decimals="1">-</td>
+        <td>mW</td>
       </tr>
     </tbody>
   </table>
+
+  <h2>Histórico</h2>
+  <p><span id="count">0</span> mensajes recibidos, el más reciente arriba. <button id="export">Exportar JSON</button></p>
+  <pre id="log"></pre>
 
   <script src="https://unpkg.com/mqtt@5.15.2/dist/mqtt.min.js"></script>
   <script src="app.js"></script>
