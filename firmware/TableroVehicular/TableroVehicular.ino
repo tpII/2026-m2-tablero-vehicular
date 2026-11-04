@@ -7,17 +7,34 @@
 #include "src/Wifi.cpp"
 #include "src/Mqtt.cpp"
 #include "src/Hall.cpp"
-#include "src/Task.cpp"
 
 #include "config.h"
 
-static float ReadPotentiometer() {
-  return EncoderPercent(ReadEncoderRaw());
+struct Telemetry {
+  float potentiometer;
+  float motor;
+  float current;
+  float power;
+};
+
+static QueueHandle_t telemetryQueue;
+static TaskHandle_t controlTask;
+
+static void RunControl(void *) {
+  Telemetry telemetry;
+  for (;;) {
+    telemetry.potentiometer = EncoderPercent(ReadEncoderRaw());
+    WriteMotorPercent(telemetry.potentiometer);
+    telemetry.motor = MotorPercent();
+    telemetry.current = ReadIna219Milliamps();
+    telemetry.power = ReadIna219Milliwatts();
+    xQueueOverwrite(telemetryQueue, &telemetry);
+    vTaskDelay(pdMS_TO_TICKS(CONTROL_TASK_PERIOD_MS));
+  }
 }
 
-static float DriveMotor(float percent) {
-  WriteMotorPercent(percent);
-  return MotorPercent();
+static void PrintControl(const Telemetry &telemetry) {
+  Serial.printf("Potentiometer: %5.1f %% | Motor: %5.1f %% | Stack free: %u\n", telemetry.potentiometer, telemetry.motor, uxTaskGetStackHighWaterMark(controlTask));
 }
 
 void setup() {
@@ -40,23 +57,24 @@ void setup() {
   InitializeWifi();
   InitializeMqtt();
 
-  InitializeTask(ReadPotentiometer, DriveMotor, ReadIna219Milliamps, ReadIna219Milliwatts);
+  telemetryQueue = xQueueCreate(1, sizeof(Telemetry));
+  xTaskCreatePinnedToCore(RunControl, "control", CONTROL_TASK_STACK, nullptr, CONTROL_TASK_PRIORITY, &controlTask, CONTROL_TASK_CORE);
 }
 
 void loop() {
   KeepMqttAlive();
 
-  TaskReading reading;
-  if (!ReceiveTask(&reading)) return;
+  Telemetry telemetry;
+  if (xQueueReceive(telemetryQueue, &telemetry, pdMS_TO_TICKS(CONTROL_TASK_PERIOD_MS)) != pdTRUE) return;
 
-  ShowDisplayPercent(reading.potentiometer);
+  ShowDisplayPercent(telemetry.potentiometer);
 
   unsigned long periodUs = ReadHallPeriodUs();
   char payload[128];
-  snprintf(payload, sizeof(payload), "{\"potentiometer\":%.1f,\"motorPwm\":%.1f,\"rpm\":%.1f,\"speed\":%.2f,\"current\":%.1f,\"power\":%.1f}", reading.potentiometer, reading.motor, HallRpm(periodUs), HallTangentialSpeed(periodUs) * 3.6f, reading.current, reading.power);
+  snprintf(payload, sizeof(payload), "{\"potentiometer\":%.1f,\"motorPwm\":%.1f,\"rpm\":%.1f,\"speed\":%.2f,\"current\":%.1f,\"power\":%.1f}", telemetry.potentiometer, telemetry.motor, HallRpm(periodUs), HallTangentialSpeed(periodUs) * 3.6f, telemetry.current, telemetry.power);
   PublishMqtt(MQTT_TOPIC, payload);
 
-  PrintTask();
+  PrintControl(telemetry);
   PrintHall();
 //  PrintWifi();
 //  PrintMqtt();

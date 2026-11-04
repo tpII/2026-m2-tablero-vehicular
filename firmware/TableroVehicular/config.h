@@ -14,6 +14,7 @@
 #define MQTT_CLIENT_ID "vehicle-dashboard"
 #define MQTT_TOPIC "vehicle/m2/telemetry"
 
-#define TASK_PERIOD_MS 100
-#define TASK_PRIORITY 2
-#define TASK_CORE 1
+#define CONTROL_TASK_PERIOD_MS 100
+#define CONTROL_TASK_PRIORITY 2
+#define CONTROL_TASK_CORE 1
+#define CONTROL_TASK_STACK 4096
