@@ -1,6 +1,7 @@
 const BROKER_URL = "ws://localhost:9001";
 const TEST_TOPIC = "vehicle/m2/test";
 const TELEMETRY_TOPIC = "vehicle/m2/telemetry";
+const STATUS_TOPIC = "vehicle/m2/status";
 
 const state = document.getElementById("state");
 const messages = document.getElementById("messages");
@@ -10,7 +11,7 @@ document.getElementById("broker").textContent = BROKER_URL;
 
 client.on("connect", () => {
   state.textContent = "conectado";
-  client.subscribe([TEST_TOPIC, TELEMETRY_TOPIC]);
+  client.subscribe([TEST_TOPIC, TELEMETRY_TOPIC, STATUS_TOPIC]);
 });
 
 client.on("close", () => {

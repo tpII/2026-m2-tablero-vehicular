@@ -7,6 +7,7 @@
 #include "src/Wifi.cpp"
 #include "src/Mqtt.cpp"
 #include "src/Hall.cpp"
+#include "src/Utils.cpp"
 
 #include "config.h"
 
@@ -18,7 +19,9 @@ struct Telemetry {
 };
 
 static QueueHandle_t telemetryQueue;
+static QueueHandle_t mqttQueue;
 static TaskHandle_t controlTask;
+static TaskHandle_t mqttTask;
 
 static void RunControl(void *) {
   Telemetry telemetry;
@@ -33,8 +36,20 @@ static void RunControl(void *) {
   }
 }
 
+static void RunMqtt(void *) {
+  char payload[MQTT_PAYLOAD_SIZE];
+  for (;;) {
+    KeepMqttAlive();
+    if (xQueueReceive(mqttQueue, payload, pdMS_TO_TICKS(MQTT_TASK_PERIOD_MS)) == pdTRUE) PublishMqtt(MQTT_TOPIC, payload);
+  }
+}
+
 static void PrintControl(const Telemetry &telemetry) {
   Serial.printf("Potentiometer: %5.1f %% | Motor: %5.1f %% | Stack free: %u\n", telemetry.potentiometer, telemetry.motor, uxTaskGetStackHighWaterMark(controlTask));
+}
+
+static void PrintMqttTask() {
+  Serial.printf("MQTT task stack free: %u\n", uxTaskGetStackHighWaterMark(mqttTask));
 }
 
 void setup() {
@@ -58,24 +73,31 @@ void setup() {
   InitializeMqtt();
 
   telemetryQueue = xQueueCreate(1, sizeof(Telemetry));
+  mqttQueue = xQueueCreate(1, MQTT_PAYLOAD_SIZE);
   xTaskCreatePinnedToCore(RunControl, "control", CONTROL_TASK_STACK, nullptr, CONTROL_TASK_PRIORITY, &controlTask, CONTROL_TASK_CORE);
+  xTaskCreatePinnedToCore(RunMqtt, "mqtt", MQTT_TASK_STACK, nullptr, MQTT_TASK_PRIORITY, &mqttTask, MQTT_TASK_CORE);
 }
 
 void loop() {
-  KeepMqttAlive();
-
   Telemetry telemetry;
   if (xQueueReceive(telemetryQueue, &telemetry, pdMS_TO_TICKS(CONTROL_TASK_PERIOD_MS)) != pdTRUE) return;
 
   ShowDisplayPercent(telemetry.potentiometer);
 
   unsigned long periodUs = ReadHallPeriodUs();
-  char payload[128];
-  snprintf(payload, sizeof(payload), "{\"potentiometer\":%.1f,\"motorPwm\":%.1f,\"rpm\":%.1f,\"speed\":%.2f,\"current\":%.1f,\"power\":%.1f}", telemetry.potentiometer, telemetry.motor, HallRpm(periodUs), HallTangentialSpeed(periodUs) * 3.6f, telemetry.current, telemetry.power);
-  PublishMqtt(MQTT_TOPIC, payload);
+  char payload[MQTT_PAYLOAD_SIZE] = "";
+  AddJson(payload, sizeof(payload), "potentiometer", telemetry.potentiometer, 1);
+  AddJson(payload, sizeof(payload), "motorPwm", telemetry.motor, 1);
+  AddJson(payload, sizeof(payload), "rpm", HallRpm(periodUs), 1);
+  AddJson(payload, sizeof(payload), "speed", HallTangentialSpeed(periodUs) * 3.6f, 2);
+  AddJson(payload, sizeof(payload), "current", telemetry.current, 1);
+  AddJson(payload, sizeof(payload), "power", telemetry.power, 1);
+  CloseJson(payload, sizeof(payload));
+  xQueueOverwrite(mqttQueue, payload);
 
   PrintControl(telemetry);
   PrintHall();
+  PrintMqttTask();
 //  PrintWifi();
 //  PrintMqtt();
 //  PublishMqtt("vehicle/m2/test", "hello from the dashboard");

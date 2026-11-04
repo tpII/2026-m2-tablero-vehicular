@@ -13,8 +13,15 @@
 #define MQTT_PORT 1884
 #define MQTT_CLIENT_ID "vehicle-dashboard"
 #define MQTT_TOPIC "vehicle/m2/telemetry"
+#define MQTT_STATUS_TOPIC "vehicle/m2/status"
+#define MQTT_PAYLOAD_SIZE 160
 
 #define CONTROL_TASK_PERIOD_MS 100
 #define CONTROL_TASK_PRIORITY 2
 #define CONTROL_TASK_CORE 1
 #define CONTROL_TASK_STACK 4096
+
+#define MQTT_TASK_PERIOD_MS 20
+#define MQTT_TASK_PRIORITY 2
+#define MQTT_TASK_CORE 0
+#define MQTT_TASK_STACK 4096
