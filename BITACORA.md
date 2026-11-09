@@ -198,7 +198,7 @@ Inconveniente
 
 - Al momento de la refactorización la comunicación MQTT no pudo quedar implementada.
 
-## 2026-11-01 - Iacobucci, Platz, Prieto
+## 2026-11-03 - Iacobucci, Platz, Prieto
 
 Actividades realizadas
 
