@@ -4,12 +4,12 @@ import useTelemetry from "../mqtt/useTelemetry";
 import "./Home.css";
 
 // Valores por defecto: se usan hasta que el ESP32 publique algo real
-const MAX_SPEED = 120;
+const MAX_SPEED = 2;
 const BAT_MIN = 10.5;
 const BAT_MAX = 14;
 const BAT_LOW = 11.5;
 
-const SPEED_LABELS = ["0", "30", "60", "90", "120"];
+const SPEED_LABELS = ["0", "0.5", "1", "1.5", "2"];
 const RPM_LABELS = ["0", "1500", "3000", "4500", "6000"];
 
 // Zonas en % de fondo escala, igual que setZones() de MeterWidget
@@ -63,8 +63,9 @@ export default function Home() {
             <MeterGauge
               value={data.velocidad}
               fullScale={MAX_SPEED}
-              label="KM/H"
-              unit="km/h"
+              label="M/S"
+              unit="m/s"
+              decimals={2}
               scaleLabels={SPEED_LABELS}
               zones={SPEED_ZONES}
             />
@@ -80,16 +81,17 @@ export default function Home() {
 
             <MeterGauge
               value={data.rpm}
-              fullScale={data.maxRpm}
+              fullScale={200}
               label="RPM"
               unit="rpm"
-              scaleLabels={RPM_LABELS}
+              decimals={0}
+              scaleLabels={["0", "50", "100", "150", "200"]}
               zones={RPM_ZONES}
             />
 
             <TftPanel
               title="THR"
-              value={data.potenciometro}
+              value={Number.isFinite(data.potenciometro) ? data.potenciometro.toFixed(1) : "--"}
               unit="%"
               footer="POT"
               percent={data.potenciometro}
@@ -106,8 +108,8 @@ export default function Home() {
           {live ? "ESP32" : "MOCK"}
         </span>
         <span>
-          Broker: {status} · ESP32: {deviceStatus} · {live ? "MQTT" : "datos simulados"} · {data.velocidad} km/h · {data.rpm}{" "}
-          rpm · thr {data.potenciometro}% · {bateria === null ? "--" : `${bateria} V`}
+          Broker: {status} · ESP32: {deviceStatus} · {live ? "MQTT" : "datos simulados"} · {data.velocidad} m/s · {data.rpm}{" "}
+          rpm · thr {Number.isFinite(data.potenciometro) ? data.potenciometro.toFixed(1) : "--"}% · {bateria === null ? "--" : `${bateria} V`}
         </span>
       </footer>
     </div>

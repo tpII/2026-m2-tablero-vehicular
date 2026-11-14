@@ -51,6 +51,7 @@ static void RunMqttTask(void *) {
 }
 
 static void InitializeMqtt() {
+  Serial.printf("MQTT init -> host: %s port: %d\\n", MQTT_HOST, MQTT_PORT);
   mqttClient.setServer(MQTT_HOST, MQTT_PORT);
   mqttClient.setSocketTimeout(MQTT_SOCKET_TIMEOUT_S);
   mqttClient.setBufferSize(MQTT_BUFFER_SIZE);

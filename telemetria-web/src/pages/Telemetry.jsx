@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import {
   ResponsiveContainer,
-  AreaChart,
+  LineChart,
+  Line,
   PieChart,
   Pie,
   Cell,
+  AreaChart,
   Area,
   BarChart,
   Bar,
@@ -20,6 +22,7 @@ export default function Telemetry() {
   const { data, source, status, deviceStatus, lastSeen } = useTelemetry();
   const live = source === "esp32";
   const [energyData, setEnergyData] = useState([]);
+const [motorData, setMotorData] = useState([]);
   const wasLive = useRef(false);
   const lastEnergySample = useRef(null);
 
@@ -54,6 +57,23 @@ export default function Telemetry() {
       },
     ]);
   }, [lastSeen, live, data.corrienteMotor]);
+
+  // Historial para el grafico de respuesta del motor (2 ejes)
+  useEffect(() => {
+    if (!live) {
+      setMotorData([]);
+      return;
+    }
+    if (!lastSeen) return;
+    setMotorData((prev) => [
+      ...prev.slice(-59),
+      {
+        time: new Date(lastSeen).toLocaleTimeString(),
+        potenciometro: data.potenciometro,
+        rpm: data.rpm,
+      },
+    ]);
+  }, [lastSeen, live, data.potenciometro, data.rpm]);
 
   // Inicialización de SmoothieCharts
   useEffect(() => {
@@ -212,7 +232,7 @@ export default function Telemetry() {
               </span>
             </div>
 
-            {/* CONTENEDOR DEL CANVAS */}
+            {/* CONTENEDOR DEL GRAFICO */}
             <div
               style={{
                 width: "100%",
@@ -220,12 +240,64 @@ export default function Telemetry() {
                 overflow: "hidden",
               }}
             >
-              <canvas
-                ref={canvasRef}
-                width={800} /* Agrega esto */
-                height={300} /* Agrega esto */
-                style={{ width: "100%", height: "100%", display: "block" }}
-              ></canvas>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart
+                  data={motorData}
+                  margin={{ top: 10, right: 40, left: 0, bottom: 0 }}
+                >
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    vertical={false}
+                    stroke="#1f2937"
+                  />
+                  <XAxis dataKey="time" stroke="#6b7280" hide />
+                  <YAxis
+                    yAxisId="left"
+                    domain={[0, 100]}
+                    stroke="#10b981"
+                    tick={{ fontSize: 12 }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    yAxisId="right"
+                    orientation="right"
+                    domain={[0, data.maxRpm || 6000]}
+                    stroke="#3b82f6"
+                    tick={{ fontSize: 12 }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#1f2937",
+                      borderRadius: "8px",
+                      border: "1px solid #374151",
+                      boxShadow: "0 4px 6px rgba(0,0,0,0.3)",
+                    }}
+                  />
+                  <Line
+                    yAxisId="left"
+                    type="monotone"
+                    dataKey="potenciometro"
+                    name="Acelerador (%)"
+                    stroke="#10b981"
+                    strokeWidth={2}
+                    dot={false}
+                    isAnimationActive={false}
+                  />
+                  <Line
+                    yAxisId="right"
+                    type="monotone"
+                    dataKey="rpm"
+                    name="RPM"
+                    stroke="#3b82f6"
+                    strokeWidth={2}
+                    dot={false}
+                    isAnimationActive={false}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
             </div>
           </div>
 

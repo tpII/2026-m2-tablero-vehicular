@@ -3,7 +3,7 @@ import { useMqtt } from "./useMqtt";
 
 // Valores de respaldo para campos que el firmware todavía no publica.
 export const MOCK_DATA = {
-  velocidad: 45,
+  velocidad: 1,
   rpm: 3200,
   maxRpm: 6000,
   potenciometro: 75,
@@ -19,7 +19,7 @@ const round = (v, decimals) => Number(v.toFixed(decimals));
 const walk = (value, step) => value + (Math.random() - 0.5) * 2 * step;
 
 function nextMock(prev) {
-  const velocidad = round(clamp(walk(prev.velocidad, 7), 0, 120), 0);
+  const velocidad = round(clamp(walk(prev.velocidad, 0.3), 0, 2), 2);
   const potenciometro = round(clamp(walk(prev.potenciometro, 11), 0, 100), 0);
   const rpmTarget = 800 + velocidad * 36 + potenciometro * 16;
 

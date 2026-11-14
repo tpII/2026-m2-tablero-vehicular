@@ -69,7 +69,7 @@ void loop() {
   FormatJsonFloat(reading.potentiometer, potentiometer, sizeof(potentiometer), "%.1f");
   FormatJsonFloat(reading.motor, motorPwm, sizeof(motorPwm), "%.1f");
   FormatJsonFloat(HallRpm(periodUs), rpm, sizeof(rpm), "%.1f");
-  FormatJsonFloat(HallTangentialSpeed(periodUs) * 3.6f, speed, sizeof(speed), "%.2f");
+  FormatJsonFloat(HallTangentialSpeed(periodUs), speed, sizeof(speed), "%.2f");
   FormatJsonFloat(reading.current, current, sizeof(current), "%.1f");
   FormatJsonFloat(reading.power, power, sizeof(power), "%.1f");
 
@@ -79,7 +79,7 @@ void loop() {
 
   PrintTask();
   PrintHall();
-//  PrintWifi();
-//  PrintMqtt();
+  PrintWifi();
+  PrintMqtt();
 //  PublishMqtt("vehicle/m2/test", "hello from the dashboard");
 }
