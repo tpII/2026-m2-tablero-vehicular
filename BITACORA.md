@@ -169,7 +169,7 @@ Actividades realizadas
 
 Inconvenientes
 - Se observó una zona muerta en la primera mitad del recorrido del potenciómetro donde el motor recibe tensión (emite un zumbido por la frecuencia del PWM) pero no llega a girar. Esto se debe a la caída de tensión interna del L298N (~1.5V a 2V) alimentado con 5V, sumada al par necesario para vencer la fricción inicial del motor.
-=======
+
 ## 2026-10-26 - Prieto
 
 Actividades realizadas
@@ -203,3 +203,10 @@ Inconveniente
 Actividades realizadas
 
 - Reimplementación de la comunicación MQTT dentro del proyecto junto al setup de FreeRTOS
+
+## 2026-11-13 - Platz, Prieto
+
+Actividades realizadas
+
+- Modificación de muestreo de velocidad y RPM en React para mayor exactitud
+- Modificación de control de velocidad: PWM empieza en 50% para solucionar zona muerta del comienzo
