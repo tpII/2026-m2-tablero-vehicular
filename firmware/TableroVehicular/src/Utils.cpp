@@ -11,3 +11,10 @@ static void CloseJson(char *json, size_t size) {
   size_t length = strlen(json);
   snprintf(json + length, size - length, "}");
 }
+
+static float MotorStartScale(float percent) {
+  constexpr float START_PWM_PERCENT = 57.0f;
+
+  if (percent <= 0.0f) return 0.0f;
+  return constrain(START_PWM_PERCENT + (percent / 100.0f) * (100.0f - START_PWM_PERCENT), 0.0f, 100.0f);
+}

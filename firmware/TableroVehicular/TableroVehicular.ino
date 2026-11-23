@@ -27,7 +27,7 @@ static void RunControl(void *) {
   Telemetry telemetry;
   for (;;) {
     telemetry.potentiometer = EncoderPercent(ReadEncoderRaw());
-    WriteMotorPercent(telemetry.potentiometer);
+    WriteMotorPercent(MotorStartScale(telemetry.potentiometer));
     telemetry.motor = MotorPercent();
     telemetry.current = ReadIna219Milliamps();
     telemetry.power = ReadIna219Milliwatts();
