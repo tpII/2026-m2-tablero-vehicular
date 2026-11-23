@@ -2,8 +2,7 @@
 # Documents\Arduino\libraries, no se versiona aqui)
 TFT_eSPI-2.5.43/
 
-# Credenciales WiFi/MQTT locales
-firmware/TableroVehicular/config.h
+
 
 .agents
 firmware/TableroVehicular/src/TFT_eSPI/

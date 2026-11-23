@@ -3,9 +3,9 @@
 // localStorage ("mqtt.url").
 // La IP es la del PC que corre Mosquitto; sirve tanto desde el navegador de
 // esa misma maquina como desde un movil en la misma red.
-const DEFAULT_URL = "ws://10.51.117.217:9001";
-const DEFAULT_TOPIC = "vehiculo/m2/telemetria";
-const DEFAULT_STATUS_TOPIC = "vehiculo/m2/estado";
+const DEFAULT_URL = "ws://192.168.4.2:9001";
+const DEFAULT_TOPIC = "vehicle/m2/telemetry";
+const DEFAULT_STATUS_TOPIC = "vehicle/m2/status";
 
 export const MQTT_URL =
   import.meta.env.VITE_MQTT_URL ||
@@ -22,17 +22,16 @@ export const MQTT_STATUS_TOPIC =
   localStorage.getItem("mqtt.statusTopic") ||
   DEFAULT_STATUS_TOPIC;
 
-// Campos numericos que aceptamos del ESP32
-const FIELDS = [
-  "velocidad",
-  "rpm",
-  "maxRpm",
-  "potenciometro",
-  "bateria",
-  "corrienteMotor",
-  "tensionMotor",
-  "potenciaMotor",
-];
+// Campos numericos que aceptamos del ESP32: clave del firmware -> [campo de
+// la web, escala]. La corriente y la potencia llegan en mA y mW; la web las
+// muestra en A y W.
+const FIELDS = {
+  speed: ["velocidad", 1],
+  rpm: ["rpm", 1],
+  potentiometer: ["potenciometro", 1],
+  current: ["corrienteMotor", 0.001],
+  power: ["potenciaMotor", 0.001],
+};
 
 // Number(null), Number("") y Number(true) dan 0/1: solo aceptamos numeros
 // o cadenas numericas para no tomar un payload roto por un dato valido.
@@ -57,9 +56,9 @@ export function parseTelemetry(payload) {
     return null;
 
   const data = {};
-  for (const field of FIELDS) {
-    const value = toNumber(parsed[field]);
-    if (value !== null) data[field] = value;
+  for (const [key, [field, scale]] of Object.entries(FIELDS)) {
+    const value = toNumber(parsed[key]);
+    if (value !== null) data[field] = value * scale;
   }
 
   return Object.keys(data).length ? data : null;

@@ -1,50 +1,106 @@
 #include <Arduino.h>
-#include <WiFi.h>
+
+#include "src/Encoder.cpp"
+#include "src/Display.cpp"
+#include "src/Motor.cpp"
+#include "src/Ina219.cpp"
+#include "src/Wifi.cpp"
+#include "src/Mqtt.cpp"
+#include "src/Hall.cpp"
+#include "src/Utils.cpp"
 
 #include "config.h"
-#include "src/Comunicaciones/Mqtt.h"
-#include "src/Pantalla/Pantalla.h"
-#include "src/Sensores/Sensores.h"
-#include "src/Telemetria/Telemetria.h"
 
-// Por si tu placa no lo trae definido por defecto
-#define LED_WIFI 26
+struct Telemetry {
+  float potentiometer;
+  float motor;
+  float current;
+  float power;
+};
 
-QueueHandle_t colaMqtt;
-QueueHandle_t colaPantalla;
+static QueueHandle_t telemetryQueue;
+static QueueHandle_t mqttQueue;
+static TaskHandle_t controlTask;
+static TaskHandle_t mqttTask;
+
+static void RunControl(void *) {
+  Telemetry telemetry;
+  for (;;) {
+    telemetry.potentiometer = EncoderPercent(ReadEncoderRaw());
+    WriteMotorPercent(MotorStartScale(telemetry.potentiometer));
+    telemetry.motor = MotorPercent();
+    telemetry.current = ReadIna219Milliamps();
+    telemetry.power = ReadIna219Milliwatts();
+    xQueueOverwrite(telemetryQueue, &telemetry);
+    vTaskDelay(pdMS_TO_TICKS(CONTROL_TASK_PERIOD_MS));
+  }
+}
+
+static void RunMqtt(void *) {
+  char payload[MQTT_PAYLOAD_SIZE];
+  for (;;) {
+    KeepMqttAlive();
+    if (xQueueReceive(mqttQueue, payload, pdMS_TO_TICKS(MQTT_TASK_PERIOD_MS)) == pdTRUE) PublishMqtt(MQTT_TOPIC, payload);
+  }
+}
+
+static void PrintControl(const Telemetry &telemetry) {
+  Serial.printf("Potentiometer: %5.1f %% | Motor: %5.1f %% | Stack free: %u\n", telemetry.potentiometer, telemetry.motor, uxTaskGetStackHighWaterMark(controlTask));
+}
+
+static void PrintMqttTask() {
+  Serial.printf("MQTT task stack free: %u\n", uxTaskGetStackHighWaterMark(mqttTask));
+}
 
 void setup() {
   Serial.begin(115200);
-  unsigned long espera = millis();
-  while (!Serial && millis() - espera < 2000) {
+  unsigned long start = millis();
+  while (!Serial && millis() - start < 2000) {
   }
 
-  // Inicializamos el pin del LED integrado
-  pinMode(LED_WIFI, OUTPUT);
+  InitializeEncoder();
+  InitializeDisplay(DISPLAY_ROTATION);
+  ShowGauge(GAUGE_PWM);
+  InitializeMotor();
+  InitializeHall();
+  if (!InitializeIna219()) Serial.println("INA219 not found");
+//
+//  DrawDisplayTest();
+//  delay(1000);
+//  ClearDisplay();
+//  PrintDisplay();
+//
+  InitializeWifi();
+  InitializeMqtt();
 
-  WiFi.persistent(false);
-  WiFi.mode(WIFI_STA);
-  WiFi.setAutoReconnect(true);
-
-  colaMqtt = xQueueCreate(1, sizeof(Telemetry));
-  colaPantalla = xQueueCreate(1, sizeof(Telemetry));
-
-  // Los sensores van primero: es el unico que escribe en las colas.
-  sensoresInicia(colaMqtt, colaPantalla, NUCLEO_SENSORES);
-  mqttInicia(colaMqtt, NUCLEO_MQTT);
-  pantallaInicia(colaPantalla, NUCLEO_PANTALLA);
+  telemetryQueue = xQueueCreate(1, sizeof(Telemetry));
+  mqttQueue = xQueueCreate(1, MQTT_PAYLOAD_SIZE);
+  xTaskCreatePinnedToCore(RunControl, "control", CONTROL_TASK_STACK, nullptr, CONTROL_TASK_PRIORITY, &controlTask, CONTROL_TASK_CORE);
+  xTaskCreatePinnedToCore(RunMqtt, "mqtt", MQTT_TASK_STACK, nullptr, MQTT_TASK_PRIORITY, &mqttTask, MQTT_TASK_CORE);
 }
 
-// Las tres tareas reales viven en FreeRTOS.
-// Usamos el loop() únicamente como monitor visual de red.
 void loop() {
-  if (WiFi.status() == WL_CONNECTED) {
-    // Si hay WiFi, el LED queda encendido fijo
-    digitalWrite(LED_WIFI, HIGH);
-    delay(1000); // Revisa el estado cada 1 segundo para no consumir CPU
-  } else {
-    // Si se desconecta o está intentando conectar, titila rápido
-    digitalWrite(LED_WIFI, !digitalRead(LED_WIFI));
-    delay(200);
-  }
+  Telemetry telemetry;
+  if (xQueueReceive(telemetryQueue, &telemetry, pdMS_TO_TICKS(CONTROL_TASK_PERIOD_MS)) != pdTRUE) return;
+
+  unsigned long periodUs = ReadHallPeriodUs();
+  UpdateDisplayCycle();
+  ShowDisplayGauges(telemetry.motor, HallTangentialSpeed(periodUs), telemetry.current);
+
+  char payload[MQTT_PAYLOAD_SIZE] = "";
+  AddJson(payload, sizeof(payload), "potentiometer", telemetry.potentiometer, 1);
+  AddJson(payload, sizeof(payload), "motorPwm", telemetry.motor, 1);
+  AddJson(payload, sizeof(payload), "rpm", HallRpm(periodUs), 1);
+  AddJson(payload, sizeof(payload), "speed", HallTangentialSpeed(periodUs), 2);
+  AddJson(payload, sizeof(payload), "current", telemetry.current, 1);
+  AddJson(payload, sizeof(payload), "power", telemetry.power, 1);
+  CloseJson(payload, sizeof(payload));
+  xQueueOverwrite(mqttQueue, payload);
+
+  PrintControl(telemetry);
+  PrintHall();
+  PrintMqttTask();
+//  PrintWifi();
+//  PrintMqtt();
+//  PublishMqtt("vehicle/m2/test", "hello from the dashboard");
 }
