@@ -28,7 +28,7 @@ static void KeepMqttAlive() {
     return;
   }
 
-  if (!IsWifiConnected()) return;
+  if (WiFi.softAPgetStationNum() == 0) return;
   if (millis() - mqttLastAttempt < MQTT_RETRY_MS) return;
 
   mqttLastAttempt = millis();
