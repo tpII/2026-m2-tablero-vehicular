@@ -9,7 +9,7 @@
 #define WIFI_SSID "TCL-Alan"
 #define WIFI_PASSWORD "etajmsql"
 
-#define MQTT_HOST "10.181.76.205"
+#define MQTT_HOST "10.181.76.217"
 #define MQTT_PORT 1883
 #define MQTT_CLIENT_ID "vehicle-dashboard"
 #define MQTT_TOPIC "vehicle/m2/telemetry"

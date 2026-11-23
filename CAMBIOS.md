@@ -182,3 +182,28 @@ se hacen por interrupción, por lo que leerlas desde cualquier núcleo es barato
 - Revisar el stack libre de `mqttTask` con `PrintMqtt`; si el high water mark
   baja de ~1000 bytes, subir `MQTT_STACK_SIZE`.
 - Compilar y cargar el firmware; no se realizó la compilación en esta sesión.
+
+## 6. Ajustes de red y unidades (m/s)
+
+### Problema
+
+El ESP32 reportaba MQTT desconectado (State: -2) aunque WiFi estaba conectado.
+Causa: desajuste de puerto (firmware 1884 vs Mosquitto 1883) e IP del PC
+cambiada a 10.181.76.205.
+
+### Cambios realizados
+
+- config.h: MQTT_HOST 10.181.76.205, MQTT_PORT 1883.
+- mqttConfig.js: DEFAULT_URL ws://10.181.76.205:9001.
+- TableroVehicular.ino: velocidad publicada en m/s (sin *3.6).
+- Mqtt.cpp: log de init con host/puerto.
+
+### React / UI
+
+- Home.jsx: potenciometro con 1 decimal; aguja m/s escala 0-2 con 2 decimales; RPM 0-200; etiquetas m/s.
+- Telemetry.jsx: grafico con dos ejes Y (acelerador y RPM).
+- useTelemetry.js: mock de velocidad adaptado a m/s.
+
+### Repositorio
+
+- mqtt-logger/ agregado a .gitignore.
