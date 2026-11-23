@@ -28,7 +28,7 @@ static void KeepMqttAlive() {
     return;
   }
 
-  if (WiFi.status() != WL_CONNECTED) return;
+  if (!IsWifiConnected()) return;
   if (millis() - mqttLastAttempt < MQTT_RETRY_MS) return;
 
   mqttLastAttempt = millis();
