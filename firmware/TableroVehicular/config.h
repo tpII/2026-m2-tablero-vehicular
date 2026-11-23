@@ -6,11 +6,11 @@
 #define PIN_INA219_SCL 22
 #define PIN_HALL 27
 
-#define WIFI_SSID "YOUR_SSID"
-#define WIFI_PASSWORD "YOUR_PASSWORD"
+#define WIFI_SSID "TCL-Alan"
+#define WIFI_PASSWORD "etajmsql"
 
-#define MQTT_HOST "10.51.117.217"
-#define MQTT_PORT 1884
+#define MQTT_HOST "10.181.76.217"
+#define MQTT_PORT 1883
 #define MQTT_CLIENT_ID "vehicle-dashboard"
 #define MQTT_TOPIC "vehicle/m2/telemetry"
 #define MQTT_STATUS_TOPIC "vehicle/m2/status"
