@@ -6,6 +6,15 @@
 #define PIN_INA219_SCL 22
 #define PIN_HALL 27
 
+#define PIN_TFT_MOSI 23
+#define PIN_TFT_SCLK 18
+#define PIN_TFT_CS 15
+#define PIN_TFT_DC 2
+#define PIN_TFT_RST 4
+
+#define DISPLAY_ROTATION 1
+#define DISPLAY_CYCLE_MS 5000
+
 #define WIFI_SSID "TableroM2"
 #define WIFI_PASSWORD "tablero2026m2"
 

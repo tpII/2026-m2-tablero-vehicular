@@ -59,7 +59,8 @@ void setup() {
   }
 
   InitializeEncoder();
-  InitializeDisplay(0);
+  InitializeDisplay(DISPLAY_ROTATION);
+  ShowGauge(GAUGE_PWM);
   InitializeMotor();
   InitializeHall();
   if (!InitializeIna219()) Serial.println("INA219 not found");
@@ -82,14 +83,15 @@ void loop() {
   Telemetry telemetry;
   if (xQueueReceive(telemetryQueue, &telemetry, pdMS_TO_TICKS(CONTROL_TASK_PERIOD_MS)) != pdTRUE) return;
 
-  ShowDisplayPercent(telemetry.potentiometer);
-
   unsigned long periodUs = ReadHallPeriodUs();
+  UpdateDisplayCycle();
+  ShowDisplayGauges(telemetry.motor, HallTangentialSpeed(periodUs), telemetry.current);
+
   char payload[MQTT_PAYLOAD_SIZE] = "";
   AddJson(payload, sizeof(payload), "potentiometer", telemetry.potentiometer, 1);
   AddJson(payload, sizeof(payload), "motorPwm", telemetry.motor, 1);
   AddJson(payload, sizeof(payload), "rpm", HallRpm(periodUs), 1);
-  AddJson(payload, sizeof(payload), "speed", HallTangentialSpeed(periodUs) * 3.6f, 2);
+  AddJson(payload, sizeof(payload), "speed", HallTangentialSpeed(periodUs), 2);
   AddJson(payload, sizeof(payload), "current", telemetry.current, 1);
   AddJson(payload, sizeof(payload), "power", telemetry.power, 1);
   CloseJson(payload, sizeof(payload));
