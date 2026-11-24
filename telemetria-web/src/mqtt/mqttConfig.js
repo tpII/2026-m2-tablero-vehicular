@@ -3,7 +3,7 @@
 // localStorage ("mqtt.url").
 // La IP es la del PC que corre Mosquitto; sirve tanto desde el navegador de
 // esa misma maquina como desde un movil en la misma red.
-const DEFAULT_URL = "ws://10.181.76.205:9001";
+const DEFAULT_URL = "ws://192.168.4.2:9001";
 const DEFAULT_TOPIC = "vehicle/m2/telemetry";
 const DEFAULT_STATUS_TOPIC = "vehicle/m2/status";
 

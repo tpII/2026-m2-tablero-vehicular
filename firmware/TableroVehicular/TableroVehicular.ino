@@ -1,40 +1,55 @@
 #include <Arduino.h>
-#include <math.h>
 
-#include "src/Display.cpp"
 #include "src/Encoder.cpp"
-#include "src/Hall.cpp"
-#include "src/Ina219.cpp"
+#include "src/Display.cpp"
 #include "src/Motor.cpp"
-#include "src/Mqtt.cpp"
-#include "src/Task.cpp"
+#include "src/Ina219.cpp"
 #include "src/Wifi.cpp"
-
+#include "src/Mqtt.cpp"
+#include "src/Hall.cpp"
+#include "src/Utils.cpp"
 
 #include "config.h"
 
-static void FormatJsonFloat(float value, char *buffer, size_t bufferSize,
-                            const char *format) {
-  if (!isfinite(value)) {
-    snprintf(buffer, bufferSize, "null");
-    return;
-  }
+struct Telemetry {
+  float potentiometer;
+  float motor;
+  float current;
+  float power;
+};
 
-  snprintf(buffer, bufferSize, format, static_cast<double>(value));
+static QueueHandle_t telemetryQueue;
+static QueueHandle_t mqttQueue;
+static TaskHandle_t controlTask;
+static TaskHandle_t mqttTask;
+
+static void RunControl(void *) {
+  Telemetry telemetry;
+  for (;;) {
+    telemetry.potentiometer = EncoderPercent(ReadEncoderRaw());
+    WriteMotorPercent(MotorStartScale(telemetry.potentiometer));
+    telemetry.motor = MotorPercent();
+    telemetry.current = ReadIna219Milliamps();
+    telemetry.power = ReadIna219Milliwatts();
+    xQueueOverwrite(telemetryQueue, &telemetry);
+    vTaskDelay(pdMS_TO_TICKS(CONTROL_TASK_PERIOD_MS));
+  }
 }
 
-static float ReadPotentiometer() { return EncoderPercent(ReadEncoderRaw()); }
-
-static float DriveMotor(float percent) {
-  constexpr float START_PWM_PERCENT = 57.0f;
-
-  float pwm = 0.0f;
-  if (percent > 0.0f) {
-    pwm = START_PWM_PERCENT + (percent / 100.0f) * (100.0f - START_PWM_PERCENT);
+static void RunMqtt(void *) {
+  char payload[MQTT_PAYLOAD_SIZE];
+  for (;;) {
+    KeepMqttAlive();
+    if (xQueueReceive(mqttQueue, payload, pdMS_TO_TICKS(MQTT_TASK_PERIOD_MS)) == pdTRUE) PublishMqtt(MQTT_TOPIC, payload);
   }
-  pwm = constrain(pwm, 0.0f, 100.0f);
-  WriteMotorPercent(pwm);
-  return MotorPercent();
+}
+
+static void PrintControl(const Telemetry &telemetry) {
+  Serial.printf("Potentiometer: %5.1f %% | Motor: %5.1f %% | Stack free: %u\n", telemetry.potentiometer, telemetry.motor, uxTaskGetStackHighWaterMark(controlTask));
+}
+
+static void PrintMqttTask() {
+  Serial.printf("MQTT task stack free: %u\n", uxTaskGetStackHighWaterMark(mqttTask));
 }
 
 void setup() {
@@ -44,56 +59,48 @@ void setup() {
   }
 
   InitializeEncoder();
-  InitializeDisplay(0);
+  InitializeDisplay(DISPLAY_ROTATION);
+  ShowGauge(GAUGE_PWM);
   InitializeMotor();
   InitializeHall();
-  if (!InitializeIna219())
-    Serial.println("INA219 not found");
-  //
-  //  DrawDisplayTest();
-  //  delay(1000);
-  //  ClearDisplay();
-  //  PrintDisplay();
-  //
+  if (!InitializeIna219()) Serial.println("INA219 not found");
+//
+//  DrawDisplayTest();
+//  delay(1000);
+//  ClearDisplay();
+//  PrintDisplay();
+//
   InitializeWifi();
   InitializeMqtt();
 
-  InitializeTask(ReadPotentiometer, DriveMotor, ReadIna219Milliamps,
-                 ReadIna219Milliwatts);
+  telemetryQueue = xQueueCreate(1, sizeof(Telemetry));
+  mqttQueue = xQueueCreate(1, MQTT_PAYLOAD_SIZE);
+  xTaskCreatePinnedToCore(RunControl, "control", CONTROL_TASK_STACK, nullptr, CONTROL_TASK_PRIORITY, &controlTask, CONTROL_TASK_CORE);
+  xTaskCreatePinnedToCore(RunMqtt, "mqtt", MQTT_TASK_STACK, nullptr, MQTT_TASK_PRIORITY, &mqttTask, MQTT_TASK_CORE);
 }
 
 void loop() {
-  TaskReading reading;
-  if (!ReceiveTask(&reading))
-    return;
-
-  ShowDisplayPercent(reading.potentiometer);
+  Telemetry telemetry;
+  if (xQueueReceive(telemetryQueue, &telemetry, pdMS_TO_TICKS(CONTROL_TASK_PERIOD_MS)) != pdTRUE) return;
 
   unsigned long periodUs = ReadHallPeriodUs();
-  char potentiometer[48];
-  char motorPwm[48];
-  char rpm[48];
-  char speed[48];
-  char current[48];
-  char power[48];
-  FormatJsonFloat(reading.potentiometer, potentiometer, sizeof(potentiometer),
-                  "%.1f");
-  FormatJsonFloat(reading.motor, motorPwm, sizeof(motorPwm), "%.1f");
-  FormatJsonFloat(HallRpm(periodUs), rpm, sizeof(rpm), "%.1f");
-  FormatJsonFloat(HallTangentialSpeed(periodUs), speed, sizeof(speed), "%.2f");
-  FormatJsonFloat(reading.current, current, sizeof(current), "%.1f");
-  FormatJsonFloat(reading.power, power, sizeof(power), "%.1f");
+  UpdateDisplayCycle();
+  ShowDisplayGauges(telemetry.motor, HallTangentialSpeed(periodUs), telemetry.current);
 
-  static TelemetryPayload payload;
-  snprintf(payload.json, sizeof(payload.json),
-           "{\"potentiometer\":%s,\"motorPwm\":%s,\"rpm\":%s,\"speed\":%s,"
-           "\"current\":%s,\"power\":%s}",
-           potentiometer, motorPwm, rpm, speed, current, power);
-  SendTelemetry(&payload);
+  char payload[MQTT_PAYLOAD_SIZE] = "";
+  AddJson(payload, sizeof(payload), "potentiometer", telemetry.potentiometer, 1);
+  AddJson(payload, sizeof(payload), "motorPwm", telemetry.motor, 1);
+  AddJson(payload, sizeof(payload), "rpm", HallRpm(periodUs), 1);
+  AddJson(payload, sizeof(payload), "speed", HallTangentialSpeed(periodUs), 2);
+  AddJson(payload, sizeof(payload), "current", telemetry.current, 1);
+  AddJson(payload, sizeof(payload), "power", telemetry.power, 1);
+  CloseJson(payload, sizeof(payload));
+  xQueueOverwrite(mqttQueue, payload);
 
-  PrintTask();
+  PrintControl(telemetry);
   PrintHall();
-  PrintWifi();
-  PrintMqtt();
-  //  PublishMqtt("vehicle/m2/test", "hello from the dashboard");
+  PrintMqttTask();
+//  PrintWifi();
+//  PrintMqtt();
+//  PublishMqtt("vehicle/m2/test", "hello from the dashboard");
 }
