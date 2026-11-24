@@ -4,11 +4,14 @@
 
 #include "../config.h"
 
+constexpr uint32_t INA219_I2C_CLOCK_HZ = 400000;
+
 static Adafruit_INA219 ina219;
 
 static bool InitializeIna219() {
   Wire.begin(PIN_INA219_SDA, PIN_INA219_SCL);
   if (!ina219.begin(&Wire)) return false;
+  Wire.setClock(INA219_I2C_CLOCK_HZ);
   ina219.setCalibration_32V_2A();
   return true;
 }

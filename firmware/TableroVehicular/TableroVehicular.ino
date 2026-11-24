@@ -14,33 +14,69 @@
 struct Telemetry {
   float potentiometer;
   float motor;
+  float rpm;
+  float speed;
   float current;
   float power;
 };
 
 static QueueHandle_t telemetryQueue;
-static QueueHandle_t mqttQueue;
 static TaskHandle_t controlTask;
+static TaskHandle_t displayTask;
 static TaskHandle_t mqttTask;
+static TaskHandle_t monitorTask;
+
+static void BuildTelemetryJson(const Telemetry &telemetry, char *payload, size_t size) {
+  payload[0] = '\0';
+  AddJson(payload, size, "potentiometer", telemetry.potentiometer, 1);
+  AddJson(payload, size, "motorPwm", telemetry.motor, 1);
+  AddJson(payload, size, "rpm", telemetry.rpm, 1);
+  AddJson(payload, size, "speed", telemetry.speed, 2);
+  AddJson(payload, size, "current", telemetry.current, 1);
+  AddJson(payload, size, "power", telemetry.power, 1);
+  CloseJson(payload, size);
+}
 
 static void RunControl(void *) {
   Telemetry telemetry;
+  TickType_t lastWake = xTaskGetTickCount();
   for (;;) {
     telemetry.potentiometer = EncoderPercent(ReadEncoderRaw());
     WriteMotorPercent(MotorStartScale(telemetry.potentiometer));
     telemetry.motor = MotorPercent();
+    unsigned long periodUs = ReadHallPeriodUs();
+    telemetry.rpm = HallRpm(periodUs);
+    telemetry.speed = HallTangentialSpeed(periodUs);
     telemetry.current = ReadIna219Milliamps();
     telemetry.power = ReadIna219Milliwatts();
     xQueueOverwrite(telemetryQueue, &telemetry);
-    vTaskDelay(pdMS_TO_TICKS(CONTROL_TASK_PERIOD_MS));
+    vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(CONTROL_TASK_PERIOD_MS));
+  }
+}
+
+static void RunDisplay(void *) {
+  Telemetry telemetry;
+  TickType_t lastWake = xTaskGetTickCount();
+  for (;;) {
+    if (xQueuePeek(telemetryQueue, &telemetry, 0) == pdTRUE) {
+      UpdateDisplayCycle();
+      ShowDisplayGauges(telemetry.motor, telemetry.speed, telemetry.current);
+    }
+    vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(DISPLAY_TASK_PERIOD_MS));
   }
 }
 
 static void RunMqtt(void *) {
+  Telemetry telemetry;
   char payload[MQTT_PAYLOAD_SIZE];
+  TickType_t lastWake = xTaskGetTickCount();
   for (;;) {
     KeepMqttAlive();
-    if (xQueueReceive(mqttQueue, payload, pdMS_TO_TICKS(MQTT_TASK_PERIOD_MS)) == pdTRUE) PublishMqtt(MQTT_TOPIC, payload);
+    if (xQueuePeek(telemetryQueue, &telemetry, 0) == pdTRUE) {
+      BuildTelemetryJson(telemetry, payload, sizeof(payload));
+      PublishMqtt(MQTT_TOPIC, payload);
+    }
+    vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(MQTT_TASK_PERIOD_MS));
   }
 }
 
@@ -48,8 +84,26 @@ static void PrintControl(const Telemetry &telemetry) {
   Serial.printf("Potentiometer: %5.1f %% | Motor: %5.1f %% | Stack free: %u\n", telemetry.potentiometer, telemetry.motor, uxTaskGetStackHighWaterMark(controlTask));
 }
 
+static void PrintDisplayTask() {
+  Serial.printf("Display task stack free: %u\n", uxTaskGetStackHighWaterMark(displayTask));
+}
+
 static void PrintMqttTask() {
   Serial.printf("MQTT task stack free: %u\n", uxTaskGetStackHighWaterMark(mqttTask));
+}
+
+static void RunMonitor(void *) {
+  Telemetry telemetry;
+  TickType_t lastWake = xTaskGetTickCount();
+  for (;;) {
+    if (xQueuePeek(telemetryQueue, &telemetry, 0) == pdTRUE) PrintControl(telemetry);
+    PrintHall();
+    PrintDisplayTask();
+    PrintMqttTask();
+//    PrintWifi();
+//    PrintMqtt();
+    vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(MONITOR_TASK_PERIOD_MS));
+  }
 }
 
 void setup() {
@@ -74,33 +128,12 @@ void setup() {
   InitializeMqtt();
 
   telemetryQueue = xQueueCreate(1, sizeof(Telemetry));
-  mqttQueue = xQueueCreate(1, MQTT_PAYLOAD_SIZE);
   xTaskCreatePinnedToCore(RunControl, "control", CONTROL_TASK_STACK, nullptr, CONTROL_TASK_PRIORITY, &controlTask, CONTROL_TASK_CORE);
+  xTaskCreatePinnedToCore(RunDisplay, "display", DISPLAY_TASK_STACK, nullptr, DISPLAY_TASK_PRIORITY, &displayTask, DISPLAY_TASK_CORE);
   xTaskCreatePinnedToCore(RunMqtt, "mqtt", MQTT_TASK_STACK, nullptr, MQTT_TASK_PRIORITY, &mqttTask, MQTT_TASK_CORE);
+//  xTaskCreatePinnedToCore(RunMonitor, "monitor", MONITOR_TASK_STACK, nullptr, MONITOR_TASK_PRIORITY, &monitorTask, MONITOR_TASK_CORE);
 }
 
 void loop() {
-  Telemetry telemetry;
-  if (xQueueReceive(telemetryQueue, &telemetry, pdMS_TO_TICKS(CONTROL_TASK_PERIOD_MS)) != pdTRUE) return;
-
-  unsigned long periodUs = ReadHallPeriodUs();
-  UpdateDisplayCycle();
-  ShowDisplayGauges(telemetry.motor, HallTangentialSpeed(periodUs), telemetry.current);
-
-  char payload[MQTT_PAYLOAD_SIZE] = "";
-  AddJson(payload, sizeof(payload), "potentiometer", telemetry.potentiometer, 1);
-  AddJson(payload, sizeof(payload), "motorPwm", telemetry.motor, 1);
-  AddJson(payload, sizeof(payload), "rpm", HallRpm(periodUs), 1);
-  AddJson(payload, sizeof(payload), "speed", HallTangentialSpeed(periodUs), 2);
-  AddJson(payload, sizeof(payload), "current", telemetry.current, 1);
-  AddJson(payload, sizeof(payload), "power", telemetry.power, 1);
-  CloseJson(payload, sizeof(payload));
-  xQueueOverwrite(mqttQueue, payload);
-
-  PrintControl(telemetry);
-  PrintHall();
-  PrintMqttTask();
-//  PrintWifi();
-//  PrintMqtt();
-//  PublishMqtt("vehicle/m2/test", "hello from the dashboard");
+  vTaskDelete(nullptr);
 }

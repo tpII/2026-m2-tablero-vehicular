@@ -1,7 +1,23 @@
 #include <Arduino.h>
+#include <TFT_eSPI.h>
 
 #include "../config.h"
-#include "TFT_eSPI/TFT_eSPI.h"
+
+static_assert(TFT_DRIVER == DISPLAY_DRIVER, "User_Setup.h driver does not match config.h");
+static_assert(TFT_MOSI == PIN_TFT_MOSI, "User_Setup.h TFT_MOSI does not match config.h");
+static_assert(TFT_SCLK == PIN_TFT_SCLK, "User_Setup.h TFT_SCLK does not match config.h");
+static_assert(TFT_CS == PIN_TFT_CS, "User_Setup.h TFT_CS does not match config.h");
+static_assert(TFT_DC == PIN_TFT_DC, "User_Setup.h TFT_DC does not match config.h");
+static_assert(TFT_RST == PIN_TFT_RST, "User_Setup.h TFT_RST does not match config.h");
+static_assert(SPI_FREQUENCY == DISPLAY_SPI_FREQUENCY, "User_Setup.h SPI_FREQUENCY does not match config.h");
+
+#if defined(DISPLAY_INVERSION_OFF) != defined(TFT_INVERSION_OFF)
+#error "User_Setup.h TFT_INVERSION_OFF does not match config.h"
+#endif
+
+#if !defined(LOAD_FONT4) || !defined(LOAD_FONT7)
+#error "User_Setup.h must load fonts 4 and 7"
+#endif
 
 constexpr uint8_t DISPLAY_FONT = 4;
 constexpr uint8_t DISPLAY_TEXT_SIZE = 2;
@@ -43,6 +59,8 @@ static float gaugeValues[GAUGE_COUNT];
 static int gaugeIndex;
 static int gaugeAngle = -1;
 static unsigned long gaugeShownMs;
+static bool gaugeValueShown;
+static float gaugeShownValue;
 
 static void InitializeDisplay(uint8_t rotation) {
   tft.init();
@@ -93,12 +111,23 @@ static void DrawGaugeArc(int angle) {
   int x = GaugeCenterX();
   int y = GaugeCenterY();
   int innerRadius = GAUGE_RADIUS - GAUGE_THICKNESS;
-  tft.drawArc(x, y, GAUGE_RADIUS, innerRadius, GAUGE_START_ANGLE, angle, gauge.color, TFT_BLACK);
-  tft.drawArc(x, y, GAUGE_RADIUS, innerRadius, angle, GAUGE_END_ANGLE, GAUGE_TRACK_COLOR, TFT_BLACK);
+  if (gaugeAngle < 0) {
+    tft.drawArc(x, y, GAUGE_RADIUS, innerRadius, GAUGE_START_ANGLE, angle, gauge.color, TFT_BLACK);
+    tft.drawArc(x, y, GAUGE_RADIUS, innerRadius, angle, GAUGE_END_ANGLE, GAUGE_TRACK_COLOR, TFT_BLACK);
+  } else if (angle > gaugeAngle) {
+    tft.drawArc(x, y, GAUGE_RADIUS, innerRadius, gaugeAngle, angle, gauge.color, TFT_BLACK);
+  } else {
+    tft.drawArc(x, y, GAUGE_RADIUS, innerRadius, angle, gaugeAngle, GAUGE_TRACK_COLOR, TFT_BLACK);
+  }
 }
 
 static void DrawGaugeValue() {
   const DisplayGauge &gauge = displayGauges[gaugeIndex];
+  float shown = roundf(gaugeValues[gaugeIndex] * powf(10.0f, gauge.decimals));
+  if (gaugeValueShown && shown == gaugeShownValue) return;
+  gaugeValueShown = true;
+  gaugeShownValue = shown;
+
   tft.setTextSize(1);
   tft.setTextDatum(MC_DATUM);
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
@@ -110,12 +139,22 @@ static void DrawGaugeValue() {
 
 static void DrawGaugeLabels() {
   const DisplayGauge &gauge = displayGauges[gaugeIndex];
+  int unitPadding = 0;
+  int titlePadding = 0;
+  for (int i = 0; i < GAUGE_COUNT; i++) {
+    unitPadding = max(unitPadding, (int)tft.textWidth(displayGauges[i].unit, GAUGE_LABEL_FONT));
+    titlePadding = max(titlePadding, (int)tft.textWidth(displayGauges[i].title, GAUGE_LABEL_FONT));
+  }
+
   tft.setTextSize(1);
   tft.setTextDatum(MC_DATUM);
   tft.setTextColor(gauge.color, TFT_BLACK);
+  tft.setTextPadding(unitPadding);
   tft.drawString(gauge.unit, GaugeCenterX(), GaugeCenterY() + GAUGE_UNIT_OFFSET_Y, GAUGE_LABEL_FONT);
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  tft.setTextPadding(titlePadding);
   tft.drawString(gauge.title, GaugeCenterX(), tft.height() - GAUGE_TITLE_OFFSET_Y, GAUGE_LABEL_FONT);
+  tft.setTextPadding(0);
   tft.setTextDatum(TL_DATUM);
 }
 
@@ -137,8 +176,8 @@ static void DrawGauge() {
 static void ShowGauge(int index) {
   gaugeIndex = (index % GAUGE_COUNT + GAUGE_COUNT) % GAUGE_COUNT;
   gaugeAngle = -1;
+  gaugeValueShown = false;
   gaugeShownMs = millis();
-  ClearDisplay();
   DrawGaugeLabels();
   DrawGaugeDots();
   DrawGauge();
