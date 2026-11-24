@@ -210,3 +210,22 @@ Actividades realizadas
 
 - Modificación de muestreo de velocidad y RPM en React para mayor exactitud
 - Modificación de control de velocidad: PWM empieza en 50% para solucionar zona muerta del comienzo
+
+## 2026-11-23 - Iacobucci, Platz, Prieto
+
+Actividades realizadas
+
+- ESP32 actua como access point para una conexión más sencilla a la web
+- Implementación correcta de las tareas de FreeRTOS
+- Reimplementación de arcos de valores en display
+
+Inconvenientes
+
+- Al tratar de incorporar el touch del display, daba falso contacto y no se podía interactuar con el mismo. Solución: cada 5 segundos rota de medición mostrada
+
+## 2026-11-24 - Iacobucci
+
+Actividades realizadas
+
+- Arreglo librería TFT
+- Mejoras de rendimiento
